@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">USSR</string>
+
+    <string name="action_delete">Delete</string>
+    <string name="action_keep">Keep</string>
+    <string name="action_favorite">Favourite</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_back">Back</string>
+
+    <string name="permission_title">USSR needs to see your library</string>
+    <string name="permission_body">Photos and videos are read on this device only. Nothing is uploaded, and nothing is deleted without your confirmation.</string>
+    <string name="permission_grant">Allow access</string>
+
+    <string name="scan_title">Looking through your library</string>
+    <string name="scan_progress">%1$d of %2$d</string>
+
+    <string name="picker_pending">%1$d waiting to be deleted · %2$s</string>
+    <string name="picker_swipe_everything">Swipe everything</string>
+    <string name="picker_review">Review what is queued</string>
+
+    <string name="deck_summary">%1$s · confidence %2$d%%</string>
+    <string name="deck_batchable">%1$d can be handled in one tap</string>
+    <string name="deck_remaining">%1$d left</string>
+    <string name="deck_pending">queued: %1$d · %2$s</string>
+    <string name="deck_done_title">Deck finished</string>
+    <string name="deck_done_body">%1$d decisions this session. %2$d items are queued for deletion, %3$s.</string>
+
+    <string name="combo_counter">Combo %1$d</string>
+    <string name="combo_best">best %1$d</string>
+    <string name="pacing_too_fast">Slow down — you are swiping faster than you can look. Combo of %1$d lost.</string>
+    <string name="pacing_delete_streak">%1$d deletions in a row. Still looking at them?</string>
+    <string name="pacing_combo">%1$d in a row, no rushing. Nice.</string>
+
+    <string name="checkpoint_title">%1$d cards in</string>
+    <string name="checkpoint_rest_title">That is a long session</string>
+    <string name="checkpoint_body">%1$d items are queued for deletion, %2$s. Look them over before going further.</string>
+    <string name="checkpoint_review">Review the queue</string>
+    <string name="checkpoint_continue">Keep swiping</string>
+
+    <string name="review_title">Before anything moves</string>
+    <string name="review_summary">%1$d items · %2$s</string>
+    <string name="review_trash_note">Confirming moves them to the system trash. Android keeps them there for 30 days, and you can pull anything back from your gallery until then.</string>
+    <string name="review_confirm">Move %1$d to the trash</string>
+
+    <string name="category_duplicates">Duplicates</string>
+    <string name="category_bursts">Burst shots</string>
+    <string name="category_blurry">Blank and blurred</string>
+    <string name="category_screenshots">Screenshots</string>
+    <string name="category_messengers">Messengers and social</string>
+    <string name="category_heavy">Heavy videos</string>
+    <string name="category_downloads">Downloads</string>
+    <string name="category_everything">Everything else</string>
+
+    <string name="reason_exact_duplicate">An identical copy of one you are keeping</string>
+    <string name="reason_near_duplicate">Nearly the same picture as another one</string>
+    <string name="reason_burst">One of several shots of the same moment</string>
+    <string name="reason_screenshot">Screenshot</string>
+    <string name="reason_screen_recording">Screen recording</string>
+    <string name="reason_messenger">Saved by a messenger</string>
+    <string name="reason_social">Saved from a social app</string>
+    <string name="reason_blurry">Out of focus</string>
+    <string name="reason_blank">Almost nothing in the frame</string>
+    <string name="reason_heavy">Large file</string>
+    <string name="reason_old">Old, and never touched since</string>
+    <string name="reason_no_text">A screenshot with no text on it</string>
+    <string name="reason_document">Looks like a document</string>
+    <string name="reason_receipt">Looks like a receipt or a ticket</string>
+    <string name="reason_code">Looks like a one-time code</string>
+    <string name="reason_faces">There are faces in it</string>
+    <string name="reason_favorite">Marked as a favourite</string>
+    <string name="reason_album">Filed in an album</string>
+    <string name="reason_edited">You edited it after it arrived</string>
+</resources>
