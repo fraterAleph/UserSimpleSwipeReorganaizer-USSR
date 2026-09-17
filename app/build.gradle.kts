@@ -5,6 +5,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Release signing comes from the environment when it is configured, and falls back to the
+// committed testing key when it is not — see signing/README.md for what that key is and is
+// not for. The fallback is what lets a clean checkout, and a fork's CI, produce an APK that
+// actually installs without anyone setting up secrets first.
+val releaseKeystore: File? = System.getenv("USSR_KEYSTORE_FILE")
+    ?.let(::File)
+    ?.takeIf { it.exists() }
+
 android {
     namespace = "app.ussr"
     compileSdk = 35
@@ -21,6 +29,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("testing") {
+            storeFile = rootProject.file("signing/testing.keystore")
+            storePassword = "ussr-testing"
+            keyAlias = "ussr-testing"
+            keyPassword = "ussr-testing"
+        }
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = System.getenv("USSR_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("USSR_KEY_ALIAS")
+                keyPassword = System.getenv("USSR_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -30,6 +55,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("testing")
         }
     }
 

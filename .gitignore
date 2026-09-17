@@ -9,4 +9,8 @@ captures/
 .cxx/
 *.apk
 *.aab
+# Keystores never belong in a repository, with one deliberate exception: the public testing
+# key, which exists so that every CI build is signed identically and installs over the last
+# one. See signing/README.md before adding anything else here.
 *.keystore
+!signing/testing.keystore

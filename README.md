@@ -44,6 +44,23 @@ Reclaimed megabytes survive a broken combo — the work was still done.
 the total it frees, and confirming hands it to `MediaStore.createTrashRequest` — the system
 trash, which Android keeps for 30 days and you can restore from in your own gallery.
 
+## Install it
+
+Every push to `main` builds the app and replaces the
+[**latest release**](https://github.com/fraterAleph/UserSimpleSwipeReorganaizer-USSR/releases/tag/latest)
+with fresh APKs. Open that page on the phone and download the **arm64-v8a** file — that is
+what a modern Android phone runs. The x86 files are for emulators.
+
+Android will ask whether this source may install apps, because the file did not come from
+Play. That is the normal sideloading prompt.
+
+Test builds are signed with the key in [`signing/`](signing/README.md), which is committed
+and public on purpose: it keeps every build in the series signed identically, so a new one
+installs over the old one, and it needs no repository secrets. It is not a key to publish
+under. Configure `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`
+and `RELEASE_KEY_PASSWORD` as repository secrets and the same workflow signs with those
+instead, no code change needed.
+
 ## Layout
 
     core/   pure Kotlin, no Android dependency: hashing, focus measure, grouping,

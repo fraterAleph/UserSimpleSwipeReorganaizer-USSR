@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,6 +26,9 @@ jobs:
   app:
     name: android app
     runs-on: ubuntu-latest
+    permissions:
+      # Needed only by the publish step below, which replaces the "latest" release.
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -33,4 +37,49 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew :app:assembleDebug --no-daemon
+
+      # The release build signs with a real key when the repository has one configured and
+      # with the committed testing key otherwise (see signing/README.md). Both produce an
+      # APK that installs; only the first is fit to hand to anyone else. `secrets` cannot be
+      # read in an `if:`, so the presence check goes through an env var.
+      - name: Decode the release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          set -eu
+          if [ -n "${KEYSTORE_BASE64:-}" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "USSR_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "Signing with the configured release key."
+          else
+            echo "No release key configured; falling back to the testing key."
+          fi
+
+      - name: Build
+        env:
+          USSR_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          USSR_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          USSR_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      # Kept for pull requests and for inspecting a run that never reached the publish step.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # One rolling "latest" release, replaced on every push to main, so the download link in
+      # the README never goes stale and no version number has to be invented for it.
+      - name: Publish to the latest release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest \
+            --prerelease \
+            --title "Latest build" \
+            --notes "Built from ${GITHUB_SHA:0:7} on $(date -u +%Y-%m-%d). Install the **arm64-v8a** file on a phone; the x86 files are for emulators." \
+            app/build/outputs/apk/release/*.apk
