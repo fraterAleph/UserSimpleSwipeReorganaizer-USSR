@@ -35,7 +35,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # No setup-android step: the ubuntu runner image already ships an Android SDK with
+      # ANDROID_HOME set and the licences accepted, and android-actions/setup-android@v3
+      # fails outright on it (its sdkmanager call exits 1). Gradle fetches whatever build
+      # tools the image is missing by itself.
       - uses: gradle/actions/setup-gradle@v4
 
       # The release build signs with a real key when the repository has one configured and
