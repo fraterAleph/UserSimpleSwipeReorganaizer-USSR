@@ -46,6 +46,19 @@ android {
         compose = true
     }
 
+    // ML Kit ships its OCR and labelling pipelines as native libraries, and one APK holding
+    // all four ABIs is 88MB of which 80MB is those libraries — for a phone that can only
+    // ever run one of them. Splitting per ABI cuts what a device actually installs to about
+    // a quarter of that. x86 builds are kept because that is what an emulator runs.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

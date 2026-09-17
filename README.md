@@ -56,7 +56,21 @@ tested on a laptop:
     ./gradlew :core:test
 
 `:app` is only included in the build when an Android SDK is configured, so that command
-works on a machine that has none.
+works on a machine that has none. With an SDK present:
+
+    ./gradlew :app:assembleDebug
+    ./gradlew :app:assembleRelease
+
+The release build is split per ABI, because ML Kit's OCR and labelling pipelines are native
+libraries and one APK carrying all four architectures is 88MB for a device that can only run
+one of them. Per ABI it is 29MB on arm64, 21MB on arm32.
+
+The root `build.gradle.kts` declares no plugins, which costs one Gradle warning about the
+Kotlin plugin being loaded twice. Silencing it means putting the Kotlin plugin on the root
+classpath, at which point the Kotlin Android plugin cannot apply — it references AGP types a
+non-Android root project has no classpath for — and putting AGP at the root is what must not
+happen, since AGP resolves only against Google's Maven. The warning is the cheaper half of
+that trade.
 
 ## Requirements
 
@@ -78,8 +92,9 @@ honour it.
 - **The first content pass is slow** on a large library — thousands of images through OCR is
   minutes of work. That is why it waits for a charger and why the heuristics alone are enough
   to start.
-- **The Android module has not been run on a device yet.** `core` is tested; `app` is written
-  but unproven.
+- **The Android module has never been run on a device.** It compiles clean now — debug and
+  release, R8 and resource shrinking included — and `core`'s analysis is unit-tested, but
+  nothing here has met a real photo library. Treat the first run as a first run.
 
 ## Licence
 
