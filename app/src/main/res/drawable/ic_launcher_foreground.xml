@@ -3,13 +3,17 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- A card with a hard offset shadow, in the app's own palette. -->
     <path
-        android:fillColor="#E8E8EF"
-        android:pathData="M36,34h36a4,4 0,0 1,4 4v32a4,4 0,0 1,-4 4h-36a4,4 0,0 1,-4 -4v-32a4,4 0,0 1,4 -4z" />
+        android:fillColor="#4F0014"
+        android:pathData="M40,34h34v42h-34z" />
     <path
-        android:fillColor="#1B1B1F"
-        android:pathData="M40,64l10,-14 8,10 6,-7 8,11z" />
+        android:fillColor="#1A090F"
+        android:pathData="M34,28h34v42h-34z" />
     <path
-        android:fillColor="#8AB4F8"
-        android:pathData="M24,54l8,-6v12zM84,54l-8,-6v12z" />
+        android:fillColor="#C4123A"
+        android:pathData="M34,28h34v4h-34zM34,66h34v4h-34zM34,28h4v42h-4zM64,28h4v42h-4z" />
+    <path
+        android:fillColor="#F2E4D4"
+        android:pathData="M42,44h6v6h-6zM54,44h6v6h-6zM42,56h18v4h-18z" />
 </vector>

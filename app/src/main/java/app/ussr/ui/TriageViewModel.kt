@@ -70,7 +70,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             val decks = repository.decks(library, _state.value.mode)
             _state.value = _state.value.copy(loading = false, decks = decks)
             refreshPending()
-            ContentAnalysisWorker.enqueue(getApplication())
+            ContentAnalysisWorker.enqueue(getApplication<Application>())
         }
     }
 

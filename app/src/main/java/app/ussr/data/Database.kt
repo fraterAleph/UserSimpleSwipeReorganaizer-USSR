@@ -29,9 +29,13 @@ data class AnalysisEntity(
     val labels: String?,
     val faceCount: Int?,
     val analysedAtMs: Long,
-) {
-    val hasContentSignals: Boolean get() = ocrText != null
-}
+)
+
+/**
+ * Declared outside the entity on purpose: Room inspects every property of an @Entity class,
+ * and a computed one inside it is an easy way to confuse the schema generator.
+ */
+val AnalysisEntity.hasContentSignals: Boolean get() = ocrText != null
 
 enum class DecisionKind { Delete, Keep, Favorite, Skip }
 

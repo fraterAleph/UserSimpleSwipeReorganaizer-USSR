@@ -9,6 +9,10 @@
     <string name="action_undo">Undo</string>
     <string name="action_back">Back</string>
 
+    <string name="action_batch">Take the obvious %1$d in one go</string>
+    <string name="stat_left">left</string>
+    <string name="stat_queued">queued</string>
+
     <string name="permission_title">USSR needs to see your library</string>
     <string name="permission_body">Photos and videos are read on this device only. Nothing is uploaded, and nothing is deleted without your confirmation.</string>
     <string name="permission_grant">Allow access</string>
@@ -22,12 +26,9 @@
 
     <string name="deck_summary">%1$s · confidence %2$d%%</string>
     <string name="deck_batchable">%1$d can be handled in one tap</string>
-    <string name="deck_remaining">%1$d left</string>
-    <string name="deck_pending">queued: %1$d · %2$s</string>
     <string name="deck_done_title">Deck finished</string>
     <string name="deck_done_body">%1$d decisions this session. %2$d items are queued for deletion, %3$s.</string>
 
-    <string name="combo_counter">Combo %1$d</string>
     <string name="combo_best">best %1$d</string>
     <string name="pacing_too_fast">Slow down — you are swiping faster than you can look. Combo of %1$d lost.</string>
     <string name="pacing_delete_streak">%1$d deletions in a row. Still looking at them?</string>

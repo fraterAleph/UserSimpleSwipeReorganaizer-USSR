@@ -18,7 +18,10 @@ import kotlinx.coroutines.withContext
 class ThumbnailAnalyzer(private val resolver: ContentResolver) {
 
     suspend fun analyse(uri: Uri): VisualSignals? = withContext(Dispatchers.IO) {
-        val bitmap = loadThumbnail(uri) ?: return@withContext null
+        val decoded = loadThumbnail(uri) ?: return@withContext null
+        // A HARDWARE bitmap lives in graphics memory and has no pixels to read back, so
+        // getPixels would throw on it. loadThumbnail can hand one over on some devices.
+        val bitmap = decoded.readable()
         try {
             val gray = toGrayscale(bitmap)
             val hashSource = PixelAnalysis.downscale(
@@ -34,9 +37,17 @@ class ThumbnailAnalyzer(private val resolver: ContentResolver) {
                 meanLuma = PixelAnalysis.meanLuma(gray),
             )
         } finally {
+            if (bitmap !== decoded) decoded.recycle()
             bitmap.recycle()
         }
     }
+
+    private fun Bitmap.readable(): Bitmap =
+        if (config == Bitmap.Config.HARDWARE) {
+            copy(Bitmap.Config.ARGB_8888, false) ?: this
+        } else {
+            this
+        }
 
     private fun loadThumbnail(uri: Uri): Bitmap? = runCatching {
         // loadThumbnail serves the system's cached thumbnail where one exists, which is why

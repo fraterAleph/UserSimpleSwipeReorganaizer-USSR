@@ -7,6 +7,10 @@
     <string name="action_undo">Вернуть</string>
     <string name="action_back">Назад</string>
 
+    <string name="action_batch">Забрать очевидные (%1$d) разом</string>
+    <string name="stat_left">осталось</string>
+    <string name="stat_queued">в очереди</string>
+
     <string name="permission_title">USSR нужен доступ к галерее</string>
     <string name="permission_body">Фото и видео читаются только на этом устройстве. Ничего не отправляется наружу и ничего не удаляется без вашего подтверждения.</string>
     <string name="permission_grant">Разрешить</string>
@@ -20,12 +24,9 @@
 
     <string name="deck_summary">%1$s · уверенность %2$d%%</string>
     <string name="deck_batchable">%1$d можно снести одним нажатием</string>
-    <string name="deck_remaining">осталось %1$d</string>
-    <string name="deck_pending">в очереди: %1$d · %2$s</string>
     <string name="deck_done_title">Пачка закончилась</string>
     <string name="deck_done_body">%1$d решений за сессию. В очереди на удаление %2$d, это %3$s.</string>
 
-    <string name="combo_counter">Комбо %1$d</string>
     <string name="combo_best">рекорд %1$d</string>
     <string name="pacing_too_fast">Не превышайте скорость — так удалится что-то нужное. Комбо %1$d сгорело.</string>
     <string name="pacing_delete_streak">%1$d удалений подряд. Вы всё ещё смотрите на них?</string>

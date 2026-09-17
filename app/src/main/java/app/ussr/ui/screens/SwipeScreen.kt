@@ -8,24 +8,14 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,7 +33,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.ussr.R
 import app.ussr.core.pacing.PacingEvent
@@ -54,6 +43,11 @@ import app.ussr.ui.TriageUiState
 import app.ussr.ui.formatBytes
 import app.ussr.ui.isKeepReason
 import app.ussr.ui.label
+import app.ussr.ui.theme.ComboTextStyle
+import app.ussr.ui.theme.PixelButton
+import app.ussr.ui.theme.PixelStat
+import app.ussr.ui.theme.PixelSurface
+import app.ussr.ui.theme.UssrColors
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -70,6 +64,7 @@ fun SwipeScreen(
     onSwipe: (SwipeDirection) -> Unit,
     onUndo: () -> Unit,
     onAcknowledge: () -> Unit,
+    onBatch: (Set<Long>) -> Unit,
     onReview: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -82,7 +77,7 @@ fun SwipeScreen(
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
-    val threshold = with(LocalDensity.current) { 120.dp.toPx() }
+    val threshold = with(LocalDensity.current) { 110.dp.toPx() }
 
     // A new card always starts centred, whatever the last gesture left behind.
     LaunchedEffect(card.item.id) {
@@ -98,34 +93,44 @@ fun SwipeScreen(
                 SwipeDirection.Favorite -> 0f to -threshold * 8
                 SwipeDirection.Skip -> 0f to threshold * 8
             }
-            launch { offsetX.animateTo(target.first, tween(180)) }
-            offsetY.animateTo(target.second, tween(180))
+            launch { offsetX.animateTo(target.first, tween(160)) }
+            offsetY.animateTo(target.second, tween(160))
             onSwipe(direction)
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
         SessionHeader(state)
+        Spacer(Modifier.height(10.dp))
 
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             state.next?.let { next ->
                 CardFace(
                     card = next,
                     model = contentUri(next.item.id),
+                    hardcore = state.hardcore,
                     modifier = Modifier
-                        .graphicsLayer { scaleX = 0.94f; scaleY = 0.94f }
-                        .alpha(0.6f),
+                        .fillMaxSize()
+                        .graphicsLayer { scaleX = 0.95f; scaleY = 0.95f; translationY = 14f }
+                        .alpha(0.45f),
                 )
             }
 
             CardFace(
                 card = card,
                 model = contentUri(card.item.id),
+                hardcore = state.hardcore,
                 modifier = Modifier
+                    .fillMaxSize()
                     .graphicsLayer {
                         translationX = offsetX.value
                         translationY = offsetY.value
-                        rotationZ = offsetX.value / 40f
+                        rotationZ = offsetX.value / 45f
                     }
                     .pointerInput(card.item.id, state.blocked) {
                         if (state.blocked) return@pointerInput
@@ -139,8 +144,8 @@ fun SwipeScreen(
                                     y < -threshold -> commit(SwipeDirection.Favorite)
                                     y > threshold -> commit(SwipeDirection.Skip)
                                     else -> scope.launch {
-                                        launch { offsetX.animateTo(0f, tween(150)) }
-                                        offsetY.animateTo(0f, tween(150))
+                                        launch { offsetX.animateTo(0f, tween(140)) }
+                                        offsetY.animateTo(0f, tween(140))
                                     }
                                 }
                             },
@@ -155,28 +160,48 @@ fun SwipeScreen(
                     },
             )
 
-            SwipeHint(offsetX.value, offsetY.value, threshold)
+            SwipeStamp(offsetX.value, offsetY.value, threshold)
         }
 
+        Spacer(Modifier.height(10.dp))
         PacingBanner(state)
+        Spacer(Modifier.height(10.dp))
 
-        Row(
-            Modifier.fillMaxWidth().padding(top = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FilledTonalIconButton(onClick = { commit(SwipeDirection.Delete) }, enabled = !state.blocked) {
-                Icon(Icons.Filled.Close, stringResource(R.string.action_delete))
-            }
-            FilledTonalIconButton(onClick = onUndo, enabled = state.lastDecision != null) {
-                Icon(Icons.Filled.Undo, stringResource(R.string.action_undo))
-            }
-            FilledTonalIconButton(onClick = { commit(SwipeDirection.Favorite) }, enabled = !state.blocked) {
-                Icon(Icons.Filled.Favorite, stringResource(R.string.action_favorite))
-            }
-            FilledTonalIconButton(onClick = { commit(SwipeDirection.Keep) }, enabled = !state.blocked) {
-                Icon(Icons.Filled.Check, stringResource(R.string.action_keep))
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PixelButton(
+                text = stringResource(R.string.action_delete),
+                onClick = { commit(SwipeDirection.Delete) },
+                enabled = !state.blocked,
+                fill = UssrColors.Blood,
+                modifier = Modifier.weight(1f),
+            )
+            PixelButton(
+                text = stringResource(R.string.action_undo),
+                onClick = onUndo,
+                enabled = state.lastDecision != null,
+                fill = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            PixelButton(
+                text = stringResource(R.string.action_keep),
+                onClick = { commit(SwipeDirection.Keep) },
+                enabled = !state.blocked,
+                fill = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        // The batch escape hatch. A thousand duplicates should not cost a thousand gestures,
+        // and hardcore never marks anything batchable, so this cannot reach a favourite.
+        val batchable = state.cards.drop(state.cursor).filter { it.batchable }
+        if (batchable.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            PixelButton(
+                text = stringResource(R.string.action_batch, batchable.size),
+                onClick = { onBatch(batchable.mapTo(HashSet()) { it.item.id }) },
+                enabled = !state.blocked,
+                fill = MaterialTheme.colorScheme.surfaceVariant,
+            )
         }
     }
 
@@ -191,76 +216,80 @@ private fun SessionHeader(state: TriageUiState) {
             // that every card in it is something the app would otherwise have protected.
             Text(
                 text = stringResource(R.string.mode_hardcore_active),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 6.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = UssrColors.Ember,
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = stringResource(R.string.deck_remaining, state.remaining),
-                style = MaterialTheme.typography.labelLarge,
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            PixelStat(
+                label = stringResource(R.string.stat_left),
+                value = state.remaining.toString(),
             )
-            Text(
-                text = stringResource(
-                    R.string.deck_pending,
-                    state.pendingDeletions,
-                    formatBytes(state.pendingBytes),
-                ),
-                style = MaterialTheme.typography.labelLarge,
+            PixelStat(
+                label = stringResource(R.string.stat_queued),
+                value = "${state.pendingDeletions} / ${formatBytes(state.pendingBytes)}",
+                valueColor = UssrColors.Ember,
             )
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         LinearProgressIndicator(
-            progress = {
-                if (state.cards.isEmpty()) 0f else state.cursor.toFloat() / state.cards.size
-            },
-            modifier = Modifier.fillMaxWidth(),
+            progress = { if (state.cards.isEmpty()) 0f else state.cursor.toFloat() / state.cards.size },
+            color = UssrColors.Blood,
+            trackColor = UssrColors.Char,
+            modifier = Modifier.fillMaxWidth().height(6.dp),
         )
     }
 }
 
 @Composable
-private fun CardFace(card: TriageCard, model: Any, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxSize(),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+private fun CardFace(
+    card: TriageCard,
+    model: Any,
+    hardcore: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    PixelSurface(
+        modifier = modifier,
+        fill = UssrColors.Ash,
+        border = if (hardcore) UssrColors.Ember else UssrColors.Edge,
+        borderWidth = 4.dp,
+        shadowOffset = 7.dp,
+        contentPadding = PaddingValues(0.dp),
     ) {
-        Box(Modifier.fillMaxSize()) {
-            AsyncImage(
-                model = model,
-                contentDescription = card.item.displayName,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth().background(UssrColors.Ink)) {
+                AsyncImage(
+                    model = model,
+                    contentDescription = card.item.displayName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             Column(
                 Modifier
-                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                    .background(UssrColors.Char)
                     .padding(12.dp),
             ) {
-                Text(card.item.displayName, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "${formatBytes(card.item.sizeBytes)} · ${card.item.width}x${card.item.height}",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = card.item.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = UssrColors.Bone,
                 )
-                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${formatBytes(card.item.sizeBytes)}  ${card.item.width}x${card.item.height}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UssrColors.Dust,
+                )
+                Spacer(Modifier.height(6.dp))
                 // Why this card is here, in the app's own words. A card that cannot explain
                 // itself has no business asking for a decision.
                 card.verdict.reasons.take(3).forEach { reason ->
                     Text(
-                        text = reason.label(),
+                        text = "> ${reason.label()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (reason.isKeepReason) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color = if (reason.isKeepReason) UssrColors.Gold else UssrColors.Dust,
                     )
                 }
             }
@@ -268,25 +297,35 @@ private fun CardFace(card: TriageCard, model: Any, modifier: Modifier = Modifier
     }
 }
 
+/** The word stamped across the card as it is dragged, in the colour of that decision. */
 @Composable
-private fun SwipeHint(x: Float, y: Float, threshold: Float) {
+private fun SwipeStamp(x: Float, y: Float, threshold: Float) {
     val horizontal = abs(x) > abs(y)
     val progress = (if (horizontal) abs(x) else abs(y)) / threshold
     if (progress < 0.15f) return
 
     val (text, color) = when {
-        horizontal && x < 0 -> stringResource(R.string.action_delete) to MaterialTheme.colorScheme.error
-        horizontal -> stringResource(R.string.action_keep) to MaterialTheme.colorScheme.primary
-        y < 0 -> stringResource(R.string.action_favorite) to MaterialTheme.colorScheme.tertiary
-        else -> stringResource(R.string.action_skip) to MaterialTheme.colorScheme.outline
+        horizontal && x < 0 -> stringResource(R.string.action_delete) to UssrColors.Ember
+        horizontal -> stringResource(R.string.action_keep) to UssrColors.Bone
+        y < 0 -> stringResource(R.string.action_favorite) to UssrColors.Gold
+        else -> stringResource(R.string.action_skip) to UssrColors.Dust
     }
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Black,
-        color = color,
+    PixelSurface(
         modifier = Modifier.alpha(progress.coerceIn(0f, 1f)),
-    )
+        fill = UssrColors.Ink,
+        border = color,
+        borderWidth = 4.dp,
+        shadowOffset = 6.dp,
+        shadow = color.copy(alpha = 0.4f),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+        fillWidth = false,
+    ) {
+        Text(
+            text = text.uppercase(),
+            style = MaterialTheme.typography.headlineMedium,
+            color = color,
+        )
+    }
 }
 
 /**
@@ -303,46 +342,33 @@ private fun PacingBanner(state: TriageUiState) {
     val streak = pacing.events.filterIsInstance<PacingEvent.DeleteStreak>().firstOrNull()
     val milestone = pacing.events.filterIsInstance<PacingEvent.ComboMilestone>().firstOrNull()
 
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.combo_counter, pacing.combo),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (pacing.combo == 0) {
-                    MaterialTheme.colorScheme.outline
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
+                text = "x${pacing.combo}",
+                style = ComboTextStyle.copy(
+                    color = if (pacing.combo == 0) UssrColors.Dust else UssrColors.Gold,
+                ),
             )
             Text(
                 text = stringResource(R.string.combo_best, pacing.longestCombo),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.labelSmall,
+                color = UssrColors.Dust,
             )
         }
 
         AnimatedVisibility(visible = tooFast != null) {
-            WarningLine(
-                text = stringResource(R.string.pacing_too_fast, tooFast?.comboLost ?: 0),
-                color = MaterialTheme.colorScheme.error,
-            )
+            WarningLine(stringResource(R.string.pacing_too_fast, tooFast?.comboLost ?: 0), UssrColors.Ember)
         }
         AnimatedVisibility(visible = streak != null) {
-            WarningLine(
-                text = stringResource(R.string.pacing_delete_streak, streak?.streak ?: 0),
-                color = MaterialTheme.colorScheme.tertiary,
-            )
+            WarningLine(stringResource(R.string.pacing_delete_streak, streak?.streak ?: 0), UssrColors.Gold)
         }
         AnimatedVisibility(visible = milestone != null && tooFast == null) {
-            WarningLine(
-                text = stringResource(R.string.pacing_combo, milestone?.combo ?: 0),
-                color = MaterialTheme.colorScheme.primary,
-            )
+            WarningLine(stringResource(R.string.pacing_combo, milestone?.combo ?: 0), UssrColors.Bone)
         }
     }
 }
@@ -351,15 +377,15 @@ private fun PacingBanner(state: TriageUiState) {
 private fun WarningLine(text: String, color: Color) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.typography.bodySmall,
         color = color,
         modifier = Modifier.padding(top = 4.dp),
     )
 }
 
 /**
- * The blocking half of the pacing layer: every fiftieth card, and at the end of a long
- * session, the deck stops until the user says to go on.
+ * The blocking half of the pacing layer: every fiftieth card in normal mode, every twelfth
+ * in hardcore, and at the end of a long session, the deck stops until the user says go on.
  */
 @Composable
 private fun PacingDialog(state: TriageUiState, onAcknowledge: () -> Unit, onReview: () -> Unit) {
@@ -369,13 +395,17 @@ private fun PacingDialog(state: TriageUiState, onAcknowledge: () -> Unit, onRevi
 
     AlertDialog(
         onDismissRequest = onAcknowledge,
+        containerColor = UssrColors.Ash,
+        titleContentColor = UssrColors.Bone,
+        textContentColor = UssrColors.Dust,
         title = {
             Text(
-                if (resting) {
+                text = if (resting) {
                     stringResource(R.string.checkpoint_rest_title)
                 } else {
                     stringResource(R.string.checkpoint_title, checkpoint?.decisions ?: 0)
                 },
+                style = MaterialTheme.typography.titleMedium,
             )
         },
         text = {
@@ -388,10 +418,14 @@ private fun PacingDialog(state: TriageUiState, onAcknowledge: () -> Unit, onRevi
             )
         },
         confirmButton = {
-            Button(onClick = onReview) { Text(stringResource(R.string.checkpoint_review)) }
+            TextButton(onClick = onReview) {
+                Text(stringResource(R.string.checkpoint_review), color = UssrColors.Ember)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onAcknowledge) { Text(stringResource(R.string.checkpoint_continue)) }
+            TextButton(onClick = onAcknowledge) {
+                Text(stringResource(R.string.checkpoint_continue), color = UssrColors.Dust)
+            }
         },
     )
 }
@@ -399,24 +433,42 @@ private fun PacingDialog(state: TriageUiState, onAcknowledge: () -> Unit, onRevi
 @Composable
 private fun DeckFinished(state: TriageUiState, onReview: () -> Unit, onBack: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().padding(24.dp),
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(R.string.deck_done_title), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(
-                R.string.deck_done_body,
-                state.pacing.decisions,
-                state.pendingDeletions,
-                formatBytes(state.pendingBytes),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        PixelSurface(fill = UssrColors.Ash, border = UssrColors.Edge) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(R.string.deck_done_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = UssrColors.Bone,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("x${state.pacing.longestCombo}", style = ComboTextStyle)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(
+                        R.string.deck_done_body,
+                        state.pacing.decisions,
+                        state.pendingDeletions,
+                        formatBytes(state.pendingBytes),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UssrColors.Dust,
+                )
+            }
+        }
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onReview) { Text(stringResource(R.string.checkpoint_review)) }
+        PixelButton(stringResource(R.string.checkpoint_review), onReview)
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onBack) { Text(stringResource(R.string.action_back)) }
+        PixelButton(
+            text = stringResource(R.string.action_back),
+            onClick = onBack,
+            fill = MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }

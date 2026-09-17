@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Ussr" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Dark, and with the window background already set to the app's ink, so the launch
+         frame does not flash white before Compose draws. -->
+    <style name="Theme.Ussr" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:statusBarColor">@color/ink</item>
+        <item name="android:navigationBarColor">@color/ink</item>
+    </style>
 </resources>
