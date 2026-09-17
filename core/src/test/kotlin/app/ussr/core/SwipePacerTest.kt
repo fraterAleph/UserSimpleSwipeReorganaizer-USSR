@@ -110,6 +110,41 @@ class SwipePacerTest {
     }
 
     @Test
+    fun `hardcore brakes on a pace normal mode allows`() {
+        val normal = SwipePacer()
+        val hardcore = SwipePacer(SwipePacer.Config.hardcore())
+        var now = 0L
+        val normalEvents = mutableListOf<PacingEvent>()
+        val hardcoreEvents = mutableListOf<PacingEvent>()
+
+        // 800ms per card: unhurried by normal standards, too fast for a deck of favourites.
+        repeat(4) {
+            now += 800
+            normalEvents += normal.onDecision(SwipeDirection.Delete, mb, now).events
+            hardcoreEvents += hardcore.onDecision(SwipeDirection.Delete, mb, now).events
+        }
+
+        assertTrue(normalEvents.none { it is PacingEvent.TooFast })
+        assertEquals(4, normal.state().combo)
+        assertTrue(hardcoreEvents.any { it is PacingEvent.TooFast })
+        // The brake fired on the third card, so the streak only got going again after it.
+        assertEquals(1, hardcore.state().combo)
+    }
+
+    @Test
+    fun `hardcore stops for a checkpoint four times as often`() {
+        val pacer = SwipePacer(SwipePacer.Config.hardcore())
+        var now = 0L
+        repeat(12) {
+            now += 3_000
+            pacer.onDecision(SwipeDirection.Delete, mb, now)
+        }
+        val state = pacer.state()
+        assertEquals(PacingLevel.Checkpoint, state.level)
+        assertEquals(12, state.events.filterIsInstance<PacingEvent.Checkpoint>().single().decisions)
+    }
+
+    @Test
     fun `a long session asks for a rest`() {
         val pacer = SwipePacer(SwipePacer.Config(restAfter = 60, checkpointEvery = 1000))
         var now = 0L

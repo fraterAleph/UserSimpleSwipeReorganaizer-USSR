@@ -26,8 +26,13 @@ later deck.
 **Deals the cards in an order that survives a tired human.** Cards are not sorted by "most
 likely junk". They are sorted by likely junk **and** cheap to get wrong, so the opening run
 is duplicates and blank frames, while anything expensive to lose — a document, a one-time
-code, a face — sinks to the bottom or never appears. Favourites, items in albums and photos
-you have edited are never offered for deletion at all.
+code, a face — sinks to the bottom or never appears.
+
+**Two modes, and they never mix.** *Normal* deals the clutter and will not show a favourite
+at any price. *Hardcore* deals exactly the complement — only favourites, album photos and
+shots you edited yourself — because that pile grows too and nothing else in the app can
+reach it. Hardcore is deliberately slower: no one-tap batch grid, a brake that trips at half
+the speed, and a checkpoint every twelve cards instead of every fifty.
 
 **Pushes back when the hand outruns the eye.** Triage always fails the same way: the first
 fifty cards really are junk, the gesture becomes a reflex, and card fifty-one goes unseen.

@@ -39,18 +39,10 @@ class JunkScorer(private val config: Config = Config()) {
         val source = SourceClassifier.classify(item)
 
         keepReasons(item, reasons)
-        if (isProtected(item)) {
-            return Verdict(
-                itemId = item.id,
-                junkScore = 0.0,
-                confidence = 1.0,
-                costOfError = 1.0,
-                category = Category.Everything,
-                reasons = reasons,
-                protected = true,
-            )
-        }
 
+        // Protected items are scored like everything else rather than short-circuited: the
+        // normal deck still refuses to deal them, but hardcore mode needs a real ordering
+        // for them, and "favourite" says nothing about whether a shot is in focus.
         var junk = 0.0
         var confidence = BASE_CONFIDENCE
         var cost = BASE_COST
@@ -167,12 +159,14 @@ class JunkScorer(private val config: Config = Config()) {
             costOfError = cost.coerceIn(0.0, 1.0),
             category = category,
             reasons = reasons,
+            protected = isProtected(item),
         )
     }
 
     /**
-     * Items the app refuses to put on a deletion card. Being wrong here is far more
-     * expensive than missing a few megabytes.
+     * Items the normal deck refuses to put on a deletion card. Being wrong here is far more
+     * expensive than missing a few megabytes, so they only surface in hardcore mode, where
+     * the user asked for them by name.
      */
     private fun isProtected(item: MediaItem): Boolean =
         item.isFavorite || item.albumCount > 0 || item.wasEditedAfterImport

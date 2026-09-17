@@ -71,7 +71,24 @@ class SwipePacer(private val config: Config = Config()) {
         val restAfter: Int = 200,
         /** Combo values worth celebrating. */
         val comboMilestones: Set<Int> = setOf(10, 25, 50, 100, 200),
-    )
+    ) {
+        companion object {
+            /**
+             * Hardcore pacing. Every card in that mode is a favourite, an album member or a
+             * photo the user edited by hand, so the brake is tighter throughout: two quick
+             * swipes already count as rushing, the checkpoint comes four times as often, and
+             * a session is called long at a quarter of the usual length.
+             */
+            fun hardcore() = Config(
+                rushIntervalMs = 1_200,
+                rushRunToBrake = 2,
+                deleteStreakWarning = 10,
+                checkpointEvery = 12,
+                restAfter = 50,
+                comboMilestones = setOf(5, 10, 25, 50),
+            )
+        }
+    }
 
     private var state = PacingState()
     private var lastDecisionAtMs: Long? = null

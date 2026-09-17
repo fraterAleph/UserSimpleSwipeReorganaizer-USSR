@@ -11,6 +11,7 @@ import app.ussr.core.model.VisualSignals
 import app.ussr.core.queue.Deck
 import app.ussr.core.queue.QueueBuilder
 import app.ussr.core.scoring.JunkScorer
+import app.ussr.core.scoring.TriageMode
 import app.ussr.core.scoring.Verdict
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -115,10 +116,16 @@ class TriageRepository(
     }
 
     /**
-     * Score everything currently known and build the decks. Items already swiped in an
-     * earlier session are left out.
+     * Score everything currently known and build the decks for one mode. Items already
+     * swiped in an earlier session are left out.
+     *
+     * Scoring is shared between the modes — only the deck builder decides which half of the
+     * library each one is allowed to deal.
      */
-    suspend fun decks(items: List<MediaItem>): List<Deck> = withContext(Dispatchers.Default) {
+    suspend fun decks(
+        items: List<MediaItem>,
+        mode: TriageMode = TriageMode.Normal,
+    ): List<Deck> = withContext(Dispatchers.Default) {
         val rows = database.analysisDao().all().associateBy { it.mediaId }
         val decided = database.decisionDao().decidedIds().toHashSet()
         val fresh = items.filterNot { it.id in decided }
@@ -139,7 +146,7 @@ class TriageRepository(
                 group = groups[item.id],
             )
         }
-        QueueBuilder.build(fresh, verdicts)
+        QueueBuilder.build(fresh, verdicts, mode)
     }
 
     suspend fun record(item: MediaItem, kind: DecisionKind) {

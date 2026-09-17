@@ -13,6 +13,7 @@ import app.ussr.core.queue.Card
 import app.ussr.core.queue.Deck
 import app.ussr.core.queue.QueueBuilder
 import app.ussr.core.scoring.Category
+import app.ussr.core.scoring.TriageMode
 import app.ussr.data.DecisionKind
 import app.ussr.work.ContentAnalysisWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ data class SweepProgress(val done: Int, val total: Int) {
 
 data class TriageUiState(
     val loading: Boolean = true,
+    val mode: TriageMode = TriageMode.Normal,
     val progress: SweepProgress = SweepProgress(0, 0),
     val decks: List<Deck> = emptyList(),
     val activeCategory: Category? = null,
@@ -40,6 +42,7 @@ data class TriageUiState(
     val next: Card? get() = cards.getOrNull(cursor + 1)
     val remaining: Int get() = (cards.size - cursor).coerceAtLeast(0)
     val blocked: Boolean get() = pacing.level == PacingLevel.Checkpoint || pacing.level == PacingLevel.Rest
+    val hardcore: Boolean get() = mode == TriageMode.Hardcore
 }
 
 data class LastDecision(val item: MediaItem, val direction: SwipeDirection)
@@ -64,10 +67,30 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             library = repository.sweep { done, total ->
                 _state.value = _state.value.copy(progress = SweepProgress(done, total))
             }
-            val decks = repository.decks(library)
+            val decks = repository.decks(library, _state.value.mode)
             _state.value = _state.value.copy(loading = false, decks = decks)
             refreshPending()
             ContentAnalysisWorker.enqueue(getApplication())
+        }
+    }
+
+    /**
+     * Switch between the two halves of the library. Any deck open at the time is dropped:
+     * the modes never mix, and carrying cards across would be exactly that.
+     */
+    fun setMode(mode: TriageMode) {
+        if (mode == _state.value.mode) return
+        pacer = pacerFor(mode)
+        _state.value = _state.value.copy(
+            mode = mode,
+            activeCategory = null,
+            cards = emptyList(),
+            cursor = 0,
+            pacing = pacer.state(),
+            lastDecision = null,
+        )
+        viewModelScope.launch {
+            _state.value = _state.value.copy(decks = repository.decks(library, mode))
         }
     }
 
@@ -78,7 +101,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             decks.firstOrNull { it.category == category }?.cards.orEmpty()
         }
-        pacer = SwipePacer()
+        pacer = pacerFor(_state.value.mode)
         _state.value = _state.value.copy(
             activeCategory = category,
             cards = cards,
@@ -132,13 +155,17 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         _state.value = _state.value.copy(pacing = pacer.acknowledge())
     }
 
-    /** Batch mode: accept every pre-ticked card in the current deck at once. */
+    /**
+     * Batch mode: accept every pre-ticked card in the current deck at once. Hardcore never
+     * marks a card batchable, so this can only ever act on ordinary clutter.
+     */
     fun acceptBatch(ids: Set<Long>) {
-        val cards = _state.value.cards.filter { it.item.id in ids }
+        val cards = _state.value.cards.filter { it.item.id in ids && it.batchable }
         if (cards.isEmpty()) return
+        val accepted = cards.mapTo(HashSet()) { it.item.id }
         viewModelScope.launch {
             cards.forEach { repository.record(it.item, DecisionKind.Delete) }
-            val remaining = _state.value.cards.filterNot { it.item.id in ids }
+            val remaining = _state.value.cards.filterNot { it.item.id in accepted }
             _state.value = _state.value.copy(cards = remaining, cursor = 0, lastDecision = null)
             refreshPending()
         }
@@ -151,9 +178,14 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.markCommitted(ids)
             library = repository.sweep()
-            _state.value = _state.value.copy(decks = repository.decks(library))
+            _state.value = _state.value.copy(decks = repository.decks(library, _state.value.mode))
             refreshPending()
         }
+    }
+
+    private fun pacerFor(mode: TriageMode) = when (mode) {
+        TriageMode.Normal -> SwipePacer()
+        TriageMode.Hardcore -> SwipePacer(SwipePacer.Config.hardcore())
     }
 
     private suspend fun refreshPending() {

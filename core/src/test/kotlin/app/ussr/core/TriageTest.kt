@@ -12,6 +12,7 @@ import app.ussr.core.scoring.Category
 import app.ussr.core.scoring.JunkScorer
 import app.ussr.core.scoring.Reason
 import app.ussr.core.scoring.TextIntent
+import app.ussr.core.scoring.TriageMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -169,10 +170,67 @@ class TriageTest {
     }
 
     @Test
-    fun `protected items never reach a deck`() {
+    fun `protected items never reach a normal deck`() {
         val favourite = item(id = 1, favorite = true, path = "Pictures/Screenshots/")
         val verdicts = mapOf(1L to scorer.score(favourite, null, null))
         assertTrue(QueueBuilder.build(listOf(favourite), verdicts).isEmpty())
+    }
+
+    @Test
+    fun `hardcore deals exactly what normal protects`() {
+        val favourite = item(id = 1, favorite = true, path = "Pictures/Screenshots/")
+        val edited = item(id = 2, addedMs = now - 300 * day, modifiedMs = now - 100 * day)
+        val ordinary = item(id = 3, path = "Pictures/Screenshots/", addedMs = now - 300 * day)
+        val items = listOf(favourite, edited, ordinary)
+        val verdicts = items.associate {
+            it.id to scorer.score(it, VisualSignals(it.id, 10.0, 120.0), null)
+        }
+
+        val normal = QueueBuilder.build(items, verdicts, TriageMode.Normal).flatMap { it.cards }
+        val hardcore = QueueBuilder.build(items, verdicts, TriageMode.Hardcore).flatMap { it.cards }
+
+        assertEquals(setOf(3L), normal.map { it.item.id }.toSet())
+        assertEquals(setOf(1L, 2L), hardcore.map { it.item.id }.toSet())
+        // The two modes partition the library: nothing appears in both.
+        assertTrue(normal.map { it.item.id }.intersect(hardcore.map { it.item.id }.toSet()).isEmpty())
+    }
+
+    @Test
+    fun `hardcore never pre-ticks a card for batch deletion`() {
+        val favouriteDuplicate = item(id = 1, favorite = true)
+        val verdict = scorer.score(
+            favouriteDuplicate,
+            VisualSignals(1, 800.0, 120.0),
+            null,
+            MediaGroup(MediaGroup.Kind.ExactDuplicate, listOf(1, 9), keeperId = 9),
+        )
+        val cards = QueueBuilder
+            .build(listOf(favouriteDuplicate), mapOf(1L to verdict), TriageMode.Hardcore)
+            .flatMap { it.cards }
+        assertEquals(1, cards.size)
+        assertFalse(cards.single().batchable)
+    }
+
+    @Test
+    fun `hardcore orders by how bad the picture looks, not by the cost of error`() {
+        val sharpFavourite = item(id = 1, favorite = true)
+        val blurryFavourite = item(id = 2, favorite = true)
+        val items = listOf(sharpFavourite, blurryFavourite)
+        val verdicts = mapOf(
+            1L to scorer.score(sharpFavourite, VisualSignals(1, 900.0, 120.0), null),
+            2L to scorer.score(blurryFavourite, VisualSignals(2, 4.0, 120.0), null),
+        )
+        val cards = QueueBuilder.build(items, verdicts, TriageMode.Hardcore).flatMap { it.cards }
+        assertEquals(2L, cards.first().item.id)
+    }
+
+    @Test
+    fun `a protected item still carries the reasons it was protected for`() {
+        val verdict = scorer.score(item(favorite = true), VisualSignals(1, 5.0, 120.0), null)
+        assertTrue(verdict.protected)
+        assertTrue(Reason.Favorite in verdict.reasons)
+        assertEquals(0.0, verdict.dealPriority, 1e-9)
+        assertTrue(verdict.hardcorePriority > 0.0)
     }
 
     @Test

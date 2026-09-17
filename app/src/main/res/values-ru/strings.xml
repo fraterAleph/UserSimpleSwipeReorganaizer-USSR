@@ -42,6 +42,13 @@
     <string name="review_trash_note">После подтверждения всё уйдёт в системную корзину. Android держит её 30 дней — до этого любой файл можно вернуть из галереи.</string>
     <string name="review_confirm">Отправить %1$d в корзину</string>
 
+    <string name="mode_normal">Обычный</string>
+    <string name="mode_hardcore">Хардкор</string>
+    <string name="mode_hardcore_warning">Хардкор разбирает ровно то, что обычный режим не трогает: избранное, фото из альбомов и кадры, которые вы редактировали сами. Пакетного сноса тут нет, тормоз жёстче.</string>
+    <string name="mode_hardcore_active">Хардкор — каждая карточка тут та, которую приложение обычно защищает</string>
+    <string name="picker_empty">Свайпать нечего. Галерея уже чистая.</string>
+    <string name="picker_empty_hardcore">Пусто. Избранного, альбомных и отредактированных фото для разбора не осталось.</string>
+
     <string name="category_duplicates">Дубликаты</string>
     <string name="category_bursts">Серии кадров</string>
     <string name="category_blurry">Пустые и смазанные</string>

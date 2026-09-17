@@ -186,6 +186,16 @@ fun SwipeScreen(
 @Composable
 private fun SessionHeader(state: TriageUiState) {
     Column(Modifier.fillMaxWidth()) {
+        if (state.hardcore) {
+            // The deck looks the same as the normal one, so the header has to say plainly
+            // that every card in it is something the app would otherwise have protected.
+            Text(
+                text = stringResource(R.string.mode_hardcore_active),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

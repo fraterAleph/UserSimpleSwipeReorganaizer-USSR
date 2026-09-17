@@ -143,6 +143,7 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
                 viewModel.openDeck(category)
                 screen = Screen.Swipe
             },
+            onSetMode = viewModel::setMode,
             onReview = ::openReview,
         )
 

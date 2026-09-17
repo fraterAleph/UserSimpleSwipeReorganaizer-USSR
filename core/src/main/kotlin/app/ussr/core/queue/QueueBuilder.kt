@@ -2,6 +2,7 @@ package app.ussr.core.queue
 
 import app.ussr.core.model.MediaItem
 import app.ussr.core.scoring.Category
+import app.ussr.core.scoring.TriageMode
 import app.ussr.core.scoring.Verdict
 
 /**
@@ -20,6 +21,7 @@ data class Card(
 data class Deck(
     val category: Category,
     val cards: List<Card>,
+    val mode: TriageMode = TriageMode.Normal,
 ) {
     val size: Int get() = cards.size
     val reclaimableBytes: Long get() = cards.sumOf { it.item.sizeBytes }
@@ -39,32 +41,51 @@ object QueueBuilder {
     const val DECK_FLOOR = 0.12
 
     /**
-     * Build one deck per category, each ordered by deal priority.
+     * Hardcore shows everything it has, down to a much lower bar. The deck is small and the
+     * user opened it deliberately, so hiding cards would just make it look empty.
+     */
+    const val HARDCORE_FLOOR = 0.02
+
+    /**
+     * Build one deck per category, each ordered for the mode it belongs to.
      *
-     * Ordering is by [Verdict.dealPriority], not by junk score: the first cards of a session
-     * are the ones that are simultaneously likely junk *and* cheap to get wrong, which is
-     * what makes an early rhythm safe. Anything expensive to lose sinks towards the end even
-     * when the score is high, and protected items never appear at all.
+     * In [TriageMode.Normal] the ordering is [Verdict.dealPriority], not the junk score: the
+     * first cards of a session are the ones that are simultaneously likely junk *and* cheap
+     * to get wrong, which is what makes an early rhythm safe. Anything expensive to lose
+     * sinks towards the end even when the score is high, and protected items never appear.
+     *
+     * [TriageMode.Hardcore] deals exactly the complement — only the protected items, ordered
+     * by [Verdict.hardcorePriority] — and never marks a card batchable, because a pre-ticked
+     * grid of favourites is precisely the mistake this app exists to avoid.
      */
     fun build(
         items: List<MediaItem>,
         verdicts: Map<Long, Verdict>,
-        floor: Double = DECK_FLOOR,
+        mode: TriageMode = TriageMode.Normal,
+        floor: Double = if (mode == TriageMode.Hardcore) HARDCORE_FLOOR else DECK_FLOOR,
     ): List<Deck> {
+        val hardcore = mode == TriageMode.Hardcore
         val cards = items.mapNotNull { item ->
             val verdict = verdicts[item.id] ?: return@mapNotNull null
-            if (verdict.protected || verdict.dealPriority < floor) return@mapNotNull null
+            if (verdict.protected != hardcore) return@mapNotNull null
+            val priority = if (hardcore) verdict.hardcorePriority else verdict.dealPriority
+            if (priority < floor) return@mapNotNull null
             Card(
                 item = item,
                 verdict = verdict,
-                batchable = verdict.dealPriority >= BATCH_PRIORITY,
+                batchable = !hardcore && priority >= BATCH_PRIORITY,
             )
         }
 
         return cards
             .groupBy { it.verdict.category }
             .map { (category, group) ->
-                Deck(category, group.sortedByDescending { it.verdict.dealPriority })
+                val ordered = if (hardcore) {
+                    group.sortedByDescending { it.verdict.hardcorePriority }
+                } else {
+                    group.sortedByDescending { it.verdict.dealPriority }
+                }
+                Deck(category, ordered, mode)
             }
             .sortedByDescending { it.confidence * it.size }
     }

@@ -44,6 +44,13 @@
     <string name="review_trash_note">Confirming moves them to the system trash. Android keeps them there for 30 days, and you can pull anything back from your gallery until then.</string>
     <string name="review_confirm">Move %1$d to the trash</string>
 
+    <string name="mode_normal">Normal</string>
+    <string name="mode_hardcore">Hardcore</string>
+    <string name="mode_hardcore_warning">Hardcore deals only what normal mode refuses to touch: favourites, photos in albums and shots you edited yourself. No one-tap batches here, and the brake is tighter.</string>
+    <string name="mode_hardcore_active">Hardcore — every card here is one the app would normally defend</string>
+    <string name="picker_empty">Nothing worth swiping. Your library is already clean.</string>
+    <string name="picker_empty_hardcore">Nothing here. You have no favourites, album photos or edited shots left to go through.</string>
+
     <string name="category_duplicates">Duplicates</string>
     <string name="category_bursts">Burst shots</string>
     <string name="category_blurry">Blank and blurred</string>
