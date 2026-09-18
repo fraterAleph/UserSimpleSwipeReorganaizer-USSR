@@ -1,6 +1,7 @@
 package app.ussr.data
 
 import android.content.Context
+import android.net.Uri
 import app.ussr.analysis.ContentAnalyzer
 import app.ussr.analysis.ThumbnailAnalyzer
 import app.ussr.core.analysis.Grouping
@@ -175,6 +176,9 @@ class TriageRepository(
      */
     suspend fun pendingFavoritesNow(): List<DecisionEntity> =
         database.decisionDao().pendingFavoritesNow()
+
+    /** Ids to uris in their own collection, which is what the system write requests want. */
+    suspend fun writableUris(ids: List<Long>): List<Uri> = scanner.writableUris(ids)
 
     /** Duplicates and bursts both produce groups; an item can only belong to one. */
     private fun buildGroupIndex(

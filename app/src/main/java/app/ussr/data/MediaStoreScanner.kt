@@ -87,4 +87,42 @@ class MediaStoreScanner(private val resolver: ContentResolver) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
         item.id,
     )
+
+    /**
+     * Resolve ids to uris in their own collection — Images for a photo, Video for a clip.
+     *
+     * The generic Files collection is fine for reading, but the write requests
+     * (createTrashRequest, createFavoriteRequest) are stricter: handing them a Files uri is
+     * rejected on some implementations, and the rejection surfaces as an exception rather
+     * than a dialog. Ids that MediaStore no longer knows are dropped, because a uri pointing
+     * at a file that is already gone poisons the whole request for the ones that remain.
+     */
+    suspend fun writableUris(ids: List<Long>): List<Uri> = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext emptyList()
+        val out = ArrayList<Uri>(ids.size)
+        resolver.query(
+            MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
+            arrayOf(
+                MediaStore.Files.FileColumns._ID,
+                MediaStore.Files.FileColumns.MEDIA_TYPE,
+            ),
+            "${MediaStore.Files.FileColumns._ID} IN (${ids.joinToString(",")})",
+            null,
+            null,
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+            val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val collection = when (cursor.getInt(typeColumn)) {
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO ->
+                        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    else ->
+                        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                }
+                out += ContentUris.withAppendedId(collection, id)
+            }
+        }
+        out
+    }
 }

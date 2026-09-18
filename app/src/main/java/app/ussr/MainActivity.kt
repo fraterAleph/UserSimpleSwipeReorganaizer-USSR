@@ -5,9 +5,11 @@ import android.app.Activity
 import android.content.ContentUris
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -47,6 +49,7 @@ import app.ussr.data.DecisionEntity
 import app.ussr.trash.MediaRequests
 import app.ussr.ui.TriageViewModel
 import app.ussr.ui.screens.DeckPickerScreen
+import app.ussr.ui.screens.JournalScreen
 import app.ussr.ui.screens.ReviewScreen
 import app.ussr.ui.screens.SwipeScreen
 import app.ussr.ui.theme.PixelButton
@@ -72,7 +75,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { Picker, Swipe, Review }
+private enum class Screen { Picker, Swipe, Review, Journal }
 
 /**
  * READ_MEDIA_IMAGES and READ_MEDIA_VIDEO only exist from API 33. The app supports 30, and
@@ -103,11 +106,15 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
     // Confirming runs up to two system sheets back to back — favourites, then the trash —
     // because each is a separate write to media the app only has read permission for.
     var favouritesInFlight by remember { mutableStateOf(emptyList<Long>()) }
-    var trashInFlight by remember { mutableStateOf(emptyList<Long>()) }
+    var trashInFlight by remember { mutableStateOf(emptyList<Uri>()) }
 
     val permissions = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result -> granted = result.values.any { it } }
+
+    // The ids are kept alongside the uris: the uris go to the system, the ids are what the
+    // app marks as done once the system says yes.
+    var trashedIds by remember { mutableStateOf(emptyList<Long>()) }
 
     val trashSheet = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -115,10 +122,11 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
         // Anything but a confirmation leaves the decisions pending, so a cancelled sheet
         // costs the user nothing and the list is still there next time.
         if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onTrashConfirmed(trashInFlight)
+            viewModel.onTrashConfirmed(trashedIds)
             screen = Screen.Picker
         }
         trashInFlight = emptyList()
+        trashedIds = emptyList()
     }
 
     val favoriteSheet = rememberLauncherForActivityResult(
@@ -129,10 +137,13 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
         }
         favouritesInFlight = emptyList()
         // Whether or not the favourites went through, the deletions still need their turn.
-        val ids = trashInFlight
-        if (ids.isNotEmpty()) {
-            MediaRequests.trash(context.contentResolver, ids)?.let {
-                trashSheet.launch(IntentSenderRequest.Builder(it).build())
+        val uris = trashInFlight
+        if (uris.isNotEmpty()) {
+            val sender = MediaRequests.trash(context.contentResolver, uris)
+            if (sender != null) {
+                trashSheet.launch(IntentSenderRequest.Builder(sender).build())
+            } else {
+                Toast.makeText(context, R.string.error_request_refused, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -157,25 +168,34 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
 
     fun confirm() {
         scope.launch {
-            val favourites = viewModel.pendingFavoriteIds()
+            val repository = ServiceLocator.repository(context)
+
             // One chunk per sheet: some OEM implementations refuse a single request carrying
             // thousands of uris, and a shorter list is easier to read besides.
-            val toTrash = MediaRequests.chunks(viewModel.pendingDeletionIds()).firstOrNull().orEmpty()
-            trashInFlight = toTrash
+            val deletionIds = MediaRequests.chunks(viewModel.pendingDeletionIds()).firstOrNull().orEmpty()
+            trashedIds = deletionIds
+            trashInFlight = repository.writableUris(deletionIds)
 
-            if (favourites.isNotEmpty()) {
-                val chunk = MediaRequests.chunks(favourites).first()
-                favouritesInFlight = chunk
-                MediaRequests.favorite(context.contentResolver, chunk)?.let {
-                    favoriteSheet.launch(IntentSenderRequest.Builder(it).build())
+            val favouriteIds = MediaRequests.chunks(viewModel.pendingFavoriteIds()).firstOrNull().orEmpty()
+            if (favouriteIds.isNotEmpty()) {
+                val uris = repository.writableUris(favouriteIds)
+                val sender = MediaRequests.favorite(context.contentResolver, uris)
+                if (sender != null) {
+                    favouritesInFlight = favouriteIds
+                    favoriteSheet.launch(IntentSenderRequest.Builder(sender).build())
                     return@launch
                 }
-                favouritesInFlight = emptyList()
             }
 
-            if (toTrash.isNotEmpty()) {
-                MediaRequests.trash(context.contentResolver, toTrash)?.let {
-                    trashSheet.launch(IntentSenderRequest.Builder(it).build())
+            if (trashInFlight.isNotEmpty()) {
+                val sender = MediaRequests.trash(context.contentResolver, trashInFlight)
+                if (sender != null) {
+                    trashSheet.launch(IntentSenderRequest.Builder(sender).build())
+                } else {
+                    // The platform refused to build the dialog. Nothing was lost — the queue
+                    // is still there — but silence here is what read as "the button does
+                    // nothing", so say it out loud.
+                    Toast.makeText(context, R.string.error_request_refused, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -205,6 +225,7 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
             onAcknowledge = viewModel::acknowledgePacing,
             onBatch = viewModel::acceptBatch,
             onReturnAnimationDone = viewModel::clearReturnAnimation,
+            onOpenJournal = { screen = Screen.Journal },
             onReview = {
                 viewModel.acknowledgePacing()
                 openReview()
@@ -213,6 +234,16 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
                 viewModel.closeDeck()
                 screen = Screen.Picker
             },
+        )
+
+        Screen.Journal -> JournalScreen(
+            history = state.history,
+            contentUri = ::uriFor,
+            onRewindTo = { index ->
+                viewModel.rewindTo(index)
+                screen = Screen.Swipe
+            },
+            onBack = { screen = Screen.Swipe },
         )
 
         Screen.Review -> ReviewScreen(

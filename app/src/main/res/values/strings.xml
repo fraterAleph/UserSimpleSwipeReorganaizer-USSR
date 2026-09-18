@@ -97,4 +97,9 @@
     <string name="pacing_steady">Steady pace. Keep it there.</string>
     <string name="review_favorites">plus %1$d to favourites</string>
     <string name="review_empty">Nothing marked for write-off yet.</string>
+    <string name="journal_title">DECISION JOURNAL</string>
+    <string name="journal_hint">Entries this session: %1$d. Tap any one and everything after it comes back.</string>
+    <string name="journal_empty">No decisions this session yet.</string>
+    <string name="journal_rewind_all">Rewind to the first</string>
+    <string name="error_request_refused">The system refused the request. Nothing is lost — the queue is still there. Try a smaller batch.</string>
 </resources>

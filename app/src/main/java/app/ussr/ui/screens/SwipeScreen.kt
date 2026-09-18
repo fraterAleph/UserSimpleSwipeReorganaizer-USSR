@@ -67,6 +67,7 @@ fun SwipeScreen(
     onAcknowledge: () -> Unit,
     onBatch: (Set<Long>) -> Unit,
     onReturnAnimationDone: () -> Unit,
+    onOpenJournal: () -> Unit,
     onReview: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -197,12 +198,16 @@ fun SwipeScreen(
                 fill = UssrColors.Blood,
                 modifier = Modifier.weight(1f),
             )
+            // Tap takes one decision back; hold opens the journal, where the session can be
+            // unwound to any point in it. The single step covers the common slip, the
+            // journal covers "the one I want back was six cards ago".
             PixelButton(
                 text = stringResource(R.string.action_undo),
                 onClick = onUndo,
                 enabled = state.lastDecision != null,
                 fill = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.weight(1f),
+                onLongClick = onOpenJournal,
             )
             PixelButton(
                 text = stringResource(R.string.action_keep),
@@ -220,6 +225,7 @@ fun SwipeScreen(
             enabled = !state.blocked,
             fill = MaterialTheme.colorScheme.surfaceVariant,
             textColor = UssrColors.Gold,
+            onLongClick = onOpenJournal,
         )
 
         // The batch escape hatch. A thousand duplicates should not cost a thousand gestures,

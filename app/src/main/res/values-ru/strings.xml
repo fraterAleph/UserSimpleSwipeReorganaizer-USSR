@@ -95,4 +95,9 @@
     <string name="pacing_steady">Ровный темп. Так и держите.</string>
     <string name="review_favorites">и %1$d — в избранное</string>
     <string name="review_empty">К списанию пока ничего не отобрано.</string>
+    <string name="journal_title">ЖУРНАЛ РЕШЕНИЙ</string>
+    <string name="journal_hint">Записей за сессию: %1$d. Нажмите на любую — и всё, что было после неё, вернётся на место.</string>
+    <string name="journal_empty">За эту сессию решений ещё не было.</string>
+    <string name="journal_rewind_all">Откатить всё до первой</string>
+    <string name="error_request_refused">Система отклонила запрос. Ничего не потеряно — очередь на месте. Попробуйте меньшей порцией.</string>
 </resources>

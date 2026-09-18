@@ -39,13 +39,19 @@ data class TriageUiState(
     val pendingDeletions: Int = 0,
     val pendingBytes: Long = 0,
     val pendingFavorites: Int = 0,
-    val lastDecision: LastDecision? = null,
+    /**
+     * Every decision made since this deck was opened, oldest first. Undo walks back through
+     * it, so a session can be unwound one file at a time all the way to where it started —
+     * one step was never enough when the thing you want back is four cards ago.
+     */
+    val history: List<LastDecision> = emptyList(),
     /**
      * Set when a card has just been pulled back by an undo, so the deck can fly it in from
      * the side it left rather than having it blink into place.
      */
     val returningFrom: SwipeDirection? = null,
 ) {
+    val lastDecision: LastDecision? get() = history.lastOrNull()
     val current: Card? get() = cards.getOrNull(cursor)
     val next: Card? get() = cards.getOrNull(cursor + 1)
     val remaining: Int get() = (cards.size - cursor).coerceAtLeast(0)
@@ -99,7 +105,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             cards = emptyList(),
             cursor = 0,
             pacing = pacer.state(),
-            lastDecision = null,
+            history = emptyList(),
         )
         viewModelScope.launch {
             _state.value = _state.value.copy(decks = repository.decks(library, mode))
@@ -119,7 +125,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             cards = cards,
             cursor = 0,
             pacing = pacer.state(),
-            lastDecision = null,
+            history = emptyList(),
         )
     }
 
@@ -139,7 +145,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         _state.value = _state.value.copy(
             cursor = _state.value.cursor + 1,
             pacing = pacing,
-            lastDecision = LastDecision(card.item, direction),
+            history = _state.value.history + LastDecision(card.item, direction),
             returningFrom = null,
         )
         viewModelScope.launch {
@@ -148,18 +154,28 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** Takes the last swipe back, and tells the pacer about it — an undo always breaks the combo. */
-    fun undo() {
-        val last = _state.value.lastDecision ?: return
-        val pacing = pacer.onUndo(last.direction, last.item.sizeBytes)
+    /** Takes the last swipe back. An undo always breaks the streak, however calm the pace was. */
+    fun undo() = rewindTo(_state.value.history.lastIndex)
+
+    /**
+     * Unwind the session back to one entry in the journal: that decision and everything
+     * after it are undone, and the file it names is the next one on the deck.
+     *
+     * Passing 0 walks the whole session back to its first card.
+     */
+    fun rewindTo(index: Int) {
+        val history = _state.value.history
+        if (index < 0 || index > history.lastIndex) return
+        val reverted = history.subList(index, history.size).toList()
+        reverted.forEach { pacer.onUndo(it.direction, it.item.sizeBytes) }
         _state.value = _state.value.copy(
-            cursor = (_state.value.cursor - 1).coerceAtLeast(0),
-            pacing = pacing,
-            lastDecision = null,
-            returningFrom = last.direction,
+            cursor = (_state.value.cursor - reverted.size).coerceAtLeast(0),
+            pacing = pacer.state(),
+            history = history.subList(0, index).toList(),
+            returningFrom = reverted.first().direction,
         )
         viewModelScope.launch {
-            repository.undo(last.item)
+            reverted.forEach { repository.undo(it.item) }
             refreshPending()
         }
     }
@@ -180,7 +196,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             cards.forEach { repository.record(it.item, DecisionKind.Delete) }
             val remaining = _state.value.cards.filterNot { it.item.id in accepted }
-            _state.value = _state.value.copy(cards = remaining, cursor = 0, lastDecision = null)
+            _state.value = _state.value.copy(cards = remaining, cursor = 0, history = emptyList())
             refreshPending()
         }
     }

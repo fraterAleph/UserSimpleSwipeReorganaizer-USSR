@@ -3,7 +3,8 @@ package app.ussr.ui.theme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,7 @@ fun PixelSurface(
  * A chunky rectangular button. Material's own buttons round their corners and lift on press;
  * this one just sits there like a key on a machine.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PixelButton(
     text: String,
@@ -80,12 +82,18 @@ fun PixelButton(
     enabled: Boolean = true,
     fill: Color = MaterialTheme.colorScheme.primary,
     textColor: Color = MaterialTheme.colorScheme.onPrimary,
+    /** A second, optional action on long press. Null leaves the button a plain one. */
+    onLongClick: (() -> Unit)? = null,
 ) {
     PixelSurface(
         modifier = modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.4f)
-            .clickable(enabled = enabled, onClick = onClick),
+            .combinedClickable(
+                enabled = enabled,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
         fill = fill,
         border = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.35f),
         shadowOffset = 4.dp,
