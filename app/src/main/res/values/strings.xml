@@ -17,22 +17,20 @@
     <string name="permission_body">Photos and videos are read on this device only. Nothing is uploaded, and nothing is deleted without your confirmation.</string>
     <string name="permission_grant">Allow access</string>
 
-    <string name="scan_title">Looking through your library</string>
+    <string name="scan_title">Taking inventory</string>
     <string name="scan_progress">%1$d of %2$d</string>
 
-    <string name="picker_pending">%1$d waiting to be deleted · %2$s</string>
+    <string name="picker_pending">marked for write-off: %1$d · %2$s</string>
     <string name="picker_swipe_everything">Swipe everything</string>
     <string name="picker_review">Review what is queued</string>
 
-    <string name="deck_summary">%1$s · confidence %2$d%%</string>
+    <string name="deck_summary">frees %1$s · confidence %2$d%%</string>
     <string name="deck_batchable">%1$d can be handled in one tap</string>
-    <string name="deck_done_title">Deck finished</string>
-    <string name="deck_done_body">%1$d decisions this session. %2$d items are queued for deletion, %3$s.</string>
+    <string name="deck_done_title">FILE CLOSED</string>
+    <string name="deck_done_body">Cases reviewed: %1$d. Marked for write-off: %2$d, %3$s.</string>
 
-    <string name="combo_best">best %1$d</string>
-    <string name="pacing_too_fast">Slow down — you are swiping faster than you can look. Combo of %1$d lost.</string>
+    <string name="pacing_too_fast">Slow down — you are swiping faster than you can look.</string>
     <string name="pacing_delete_streak">%1$d deletions in a row. Still looking at them?</string>
-    <string name="pacing_combo">%1$d in a row, no rushing. Nice.</string>
 
     <string name="checkpoint_title">%1$d cards in</string>
     <string name="checkpoint_rest_title">That is a long session</string>
@@ -40,7 +38,7 @@
     <string name="checkpoint_review">Review the queue</string>
     <string name="checkpoint_continue">Keep swiping</string>
 
-    <string name="review_title">Before anything moves</string>
+    <string name="review_title">WRITE-OFF SHEET</string>
     <string name="review_summary">%1$d items · %2$s</string>
     <string name="review_trash_note">Confirming moves them to the system trash. Android keeps them there for 30 days, and you can pull anything back from your gallery until then.</string>
     <string name="review_confirm">Move %1$d to the trash</string>
@@ -52,14 +50,14 @@
     <string name="picker_empty">Nothing worth swiping. Your library is already clean.</string>
     <string name="picker_empty_hardcore">Nothing here. You have no favourites, album photos or edited shots left to go through.</string>
 
-    <string name="category_duplicates">Duplicates</string>
-    <string name="category_bursts">Burst shots</string>
-    <string name="category_blurry">Blank and blurred</string>
-    <string name="category_screenshots">Screenshots</string>
-    <string name="category_messengers">Messengers and social</string>
-    <string name="category_heavy">Heavy videos</string>
-    <string name="category_downloads">Downloads</string>
-    <string name="category_everything">Everything else</string>
+    <string name="category_duplicates">Repeats</string>
+    <string name="category_bursts">Burst series</string>
+    <string name="category_blurry">Faulty exposures</string>
+    <string name="category_screenshots">Screen captures</string>
+    <string name="category_messengers">Correspondence and social</string>
+    <string name="category_heavy">Bulk volumes</string>
+    <string name="category_downloads">Received files</string>
+    <string name="category_everything">Miscellaneous</string>
 
     <string name="reason_exact_duplicate">An identical copy of one you are keeping</string>
     <string name="reason_near_duplicate">Nearly the same picture as another one</string>
@@ -80,4 +78,23 @@
     <string name="reason_favorite">Marked as a favourite</string>
     <string name="reason_album">Filed in an album</string>
     <string name="reason_edited">You edited it after it arrived</string>
+
+    <string name="picker_title">THE FILES</string>
+    <string name="picker_subject">Subject under review · items on file: %1$d</string>
+    <string name="deck_case_no">CASE No. %1$02d</string>
+    <string name="deck_count">%1$d items</string>
+
+    <string name="field_subject">SUBJECT</string>
+    <string name="field_measurements">PARTICULARS</string>
+    <string name="field_grounds">GROUNDS</string>
+    <string name="badge_video">VIDEO %1$s</string>
+
+    <string name="stamp_delete">WRITE OFF</string>
+    <string name="stamp_keep">ON FILE</string>
+    <string name="stamp_favorite">OF INTEREST</string>
+    <string name="stamp_skip">DEFER</string>
+
+    <string name="pacing_steady">Steady pace. Keep it there.</string>
+    <string name="review_favorites">plus %1$d to favourites</string>
+    <string name="review_empty">Nothing marked for write-off yet.</string>
 </resources>

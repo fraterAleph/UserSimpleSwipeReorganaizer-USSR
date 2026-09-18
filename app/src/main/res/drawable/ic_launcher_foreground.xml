@@ -3,17 +3,38 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- A card with a hard offset shadow, in the app's own palette. -->
+
+    <!-- A tear-off flyer: a notice sheet with a fringe of pull-tabs along the bottom, one
+         of them already taken. The whole app is that gesture - take one strip away, leave
+         the sheet standing. Drawn on the 72dp safe zone of the 108dp adaptive canvas. -->
+
+    <!-- Hard offset shadow, the same trick the in-app cards use instead of a blur. -->
     <path
         android:fillColor="#4F0014"
-        android:pathData="M40,34h34v42h-34z" />
-    <path
-        android:fillColor="#1A090F"
-        android:pathData="M34,28h34v42h-34z" />
-    <path
-        android:fillColor="#C4123A"
-        android:pathData="M34,28h34v4h-34zM34,66h34v4h-34zM34,28h4v42h-4zM64,28h4v42h-4z" />
+        android:pathData="M34,24h44v40h-44z" />
+
+    <!-- The sheet. -->
     <path
         android:fillColor="#F2E4D4"
-        android:pathData="M42,44h6v6h-6zM54,44h6v6h-6zM42,56h18v4h-18z" />
+        android:pathData="M30,20h44v40h-44z" />
+
+    <!-- Two lines of "text" on the notice. -->
+    <path
+        android:fillColor="#4F0014"
+        android:pathData="M36,28h32v5h-32zM36,38h22v3h-22zM36,44h26v3h-26z" />
+
+    <!-- The fringe: five tabs hanging off the bottom edge, split by gaps. -->
+    <path
+        android:fillColor="#F2E4D4"
+        android:pathData="M30,60h7v18h-7zM39,60h7v18h-7zM48,60h7v18h-7zM66,60h8v18h-8z" />
+
+    <!-- The one that has been torn off, fallen and tilted. -->
+    <path
+        android:fillColor="#C4123A"
+        android:pathData="M58,66l7,2l-4,16l-7,-2z" />
+
+    <!-- Perforation marks where the tabs meet the sheet. -->
+    <path
+        android:fillColor="#C4123A"
+        android:pathData="M30,58h44v3h-44z" />
 </vector>

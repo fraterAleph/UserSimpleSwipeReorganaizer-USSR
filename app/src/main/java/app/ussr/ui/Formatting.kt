@@ -7,6 +7,12 @@ import app.ussr.core.scoring.Category
 import app.ussr.core.scoring.Reason
 import java.util.Locale
 
+/** mm:ss, or a dash when MediaStore had no duration for the file. */
+fun formatDuration(durationMs: Long?): String {
+    val total = (durationMs ?: return "--:--") / 1000
+    return String.format(Locale.getDefault(), "%d:%02d", total / 60, total % 60)
+}
+
 fun formatBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
     val units = listOf("KB", "MB", "GB", "TB")

@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,10 +57,16 @@ fun DeckPickerScreen(
         }
 
         Text(
-            text = stringResource(R.string.app_name),
+            text = stringResource(R.string.picker_title),
             style = MaterialTheme.typography.headlineSmall,
             color = UssrColors.Ember,
         )
+        Text(
+            text = stringResource(R.string.picker_subject, state.libraryCount),
+            style = MaterialTheme.typography.labelSmall,
+            color = UssrColors.Edge,
+        )
+        Spacer(Modifier.height(6.dp))
         Text(
             text = stringResource(
                 R.string.picker_pending,
@@ -99,8 +105,13 @@ fun DeckPickerScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 8.dp, end = 6.dp),
         ) {
-            items(state.decks, key = { it.category.name }) { deck ->
-                DeckRow(deck, hardcore = state.hardcore, onClick = { onOpenDeck(deck.category) })
+            itemsIndexed(state.decks, key = { _, deck -> deck.category.name }) { index, deck ->
+                DeckRow(
+                    deck = deck,
+                    caseNumber = index + 1,
+                    hardcore = state.hardcore,
+                    onClick = { onOpenDeck(deck.category) },
+                )
             }
         }
 
@@ -203,13 +214,18 @@ private fun ModeTab(
 }
 
 @Composable
-private fun DeckRow(deck: Deck, hardcore: Boolean, onClick: () -> Unit) {
+private fun DeckRow(deck: Deck, caseNumber: Int, hardcore: Boolean, onClick: () -> Unit) {
     PixelSurface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         fill = UssrColors.Ash,
         border = if (hardcore) UssrColors.Ember else UssrColors.Edge,
     ) {
         Column(Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.deck_case_no, caseNumber),
+                style = MaterialTheme.typography.labelSmall,
+                color = UssrColors.Edge,
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = deck.category.label().uppercase(),
@@ -217,7 +233,7 @@ private fun DeckRow(deck: Deck, hardcore: Boolean, onClick: () -> Unit) {
                     color = UssrColors.Bone,
                 )
                 Text(
-                    text = deck.size.toString(),
+                    text = stringResource(R.string.deck_count, deck.size),
                     style = MaterialTheme.typography.titleMedium,
                     color = UssrColors.Ember,
                 )

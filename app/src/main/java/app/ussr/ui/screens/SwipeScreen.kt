@@ -1,5 +1,6 @@
 package app.ussr.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -41,9 +42,9 @@ import app.ussr.core.pacing.SwipeDirection
 import app.ussr.core.queue.Card as TriageCard
 import app.ussr.ui.TriageUiState
 import app.ussr.ui.formatBytes
+import app.ussr.ui.formatDuration
 import app.ussr.ui.isKeepReason
 import app.ussr.ui.label
-import app.ussr.ui.theme.ComboTextStyle
 import app.ussr.ui.theme.PixelButton
 import app.ussr.ui.theme.PixelStat
 import app.ussr.ui.theme.PixelSurface
@@ -53,9 +54,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
- * The deck. One card at a time, the next one peeking underneath, and the pacing layer on
- * top of both — see [PacingBanner] and [PacingDialog] for the part that pushes back when
- * the swiping gets faster than the looking.
+ * The deck: one file at a time, the next one showing underneath, and the pacing layer on top
+ * of both — see [PacingBanner] and [PacingDialog] for the part that pushes back when the
+ * swiping gets faster than the looking.
  */
 @Composable
 fun SwipeScreen(
@@ -65,9 +66,14 @@ fun SwipeScreen(
     onUndo: () -> Unit,
     onAcknowledge: () -> Unit,
     onBatch: (Set<Long>) -> Unit,
+    onReturnAnimationDone: () -> Unit,
     onReview: () -> Unit,
     onBack: () -> Unit,
 ) {
+    // Without this the system back button leaves the activity and the app disappears from
+    // under the user mid-session.
+    BackHandler(onBack = onBack)
+
     val card = state.current
     if (card == null) {
         DeckFinished(state, onReview = onReview, onBack = onBack)
@@ -79,10 +85,26 @@ fun SwipeScreen(
     val offsetY = remember { Animatable(0f) }
     val threshold = with(LocalDensity.current) { 110.dp.toPx() }
 
-    // A new card always starts centred, whatever the last gesture left behind.
-    LaunchedEffect(card.item.id) {
-        offsetX.snapTo(0f)
-        offsetY.snapTo(0f)
+    // A card normally starts centred. One that has just been undone flies back in from the
+    // edge it was thrown off, so the undo reads as a reversal rather than a jump cut.
+    LaunchedEffect(card.item.id, state.returningFrom) {
+        val from = state.returningFrom
+        if (from == null) {
+            offsetX.snapTo(0f)
+            offsetY.snapTo(0f)
+        } else {
+            val (x, y) = when (from) {
+                SwipeDirection.Delete -> -threshold * 8 to 0f
+                SwipeDirection.Keep -> threshold * 8 to 0f
+                SwipeDirection.Favorite -> 0f to -threshold * 8
+                SwipeDirection.Skip -> 0f to threshold * 8
+            }
+            offsetX.snapTo(x)
+            offsetY.snapTo(y)
+            launch { offsetX.animateTo(0f, tween(320)) }
+            offsetY.animateTo(0f, tween(320))
+            onReturnAnimationDone()
+        }
     }
 
     fun commit(direction: SwipeDirection) {
@@ -165,7 +187,7 @@ fun SwipeScreen(
 
         Spacer(Modifier.height(10.dp))
         PacingBanner(state)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PixelButton(
@@ -191,6 +213,15 @@ fun SwipeScreen(
             )
         }
 
+        Spacer(Modifier.height(8.dp))
+        PixelButton(
+            text = stringResource(R.string.action_favorite),
+            onClick = { commit(SwipeDirection.Favorite) },
+            enabled = !state.blocked,
+            fill = MaterialTheme.colorScheme.surfaceVariant,
+            textColor = UssrColors.Gold,
+        )
+
         // The batch escape hatch. A thousand duplicates should not cost a thousand gestures,
         // and hardcore never marks anything batchable, so this cannot reach a favourite.
         val batchable = state.cards.drop(state.cursor).filter { it.batchable }
@@ -213,7 +244,7 @@ private fun SessionHeader(state: TriageUiState) {
     Column(Modifier.fillMaxWidth()) {
         if (state.hardcore) {
             // The deck looks the same as the normal one, so the header has to say plainly
-            // that every card in it is something the app would otherwise have protected.
+            // that every file in it is one the app would otherwise have protected.
             Text(
                 text = stringResource(R.string.mode_hardcore_active),
                 style = MaterialTheme.typography.labelSmall,
@@ -265,39 +296,84 @@ private fun CardFace(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize(),
                 )
-            }
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(UssrColors.Char)
-                    .padding(12.dp),
-            ) {
-                Text(
-                    text = card.item.displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = UssrColors.Bone,
-                )
-                Text(
-                    text = "${formatBytes(card.item.sizeBytes)}  ${card.item.width}x${card.item.height}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = UssrColors.Dust,
-                )
-                Spacer(Modifier.height(6.dp))
-                // Why this card is here, in the app's own words. A card that cannot explain
-                // itself has no business asking for a decision.
-                card.verdict.reasons.take(3).forEach { reason ->
-                    Text(
-                        text = "> ${reason.label()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (reason.isKeepReason) UssrColors.Gold else UssrColors.Dust,
-                    )
+                // A video's first frame looks like a still, so the card has to say which it
+                // is and how long it runs — otherwise the only way to tell is the extension.
+                if (card.item.isVideo) {
+                    PixelSurface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+                        fill = UssrColors.Ink,
+                        border = UssrColors.Gold,
+                        borderWidth = 2.dp,
+                        shadowOffset = 3.dp,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        fillWidth = false,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.badge_video,
+                                formatDuration(card.item.durationMs),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = UssrColors.Gold,
+                        )
+                    }
                 }
             }
+            DossierBlock(card)
         }
     }
 }
 
-/** The word stamped across the card as it is dragged, in the colour of that decision. */
+/** The lower half of a card, laid out like the front sheet of a case file. */
+@Composable
+private fun DossierBlock(card: TriageCard) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(UssrColors.Char)
+            .padding(12.dp),
+    ) {
+        DossierField(stringResource(R.string.field_subject), card.item.displayName)
+        DossierField(
+            label = stringResource(R.string.field_measurements),
+            value = "${formatBytes(card.item.sizeBytes)} · ${card.item.width}x${card.item.height}",
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.field_grounds),
+            style = MaterialTheme.typography.labelSmall,
+            color = UssrColors.Edge,
+        )
+        // Why this file is on the desk, in the app's own words. A card that cannot explain
+        // itself has no business asking for a decision.
+        card.verdict.reasons.take(3).forEach { reason ->
+            Text(
+                text = "— ${reason.label()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (reason.isKeepReason) UssrColors.Gold else UssrColors.Dust,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DossierField(label: String, value: String) {
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = UssrColors.Edge,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = UssrColors.Bone,
+        )
+    }
+}
+
+/** The verdict stamped across the file as it is dragged, in the colour of that decision. */
 @Composable
 private fun SwipeStamp(x: Float, y: Float, threshold: Float) {
     val horizontal = abs(x) > abs(y)
@@ -305,10 +381,10 @@ private fun SwipeStamp(x: Float, y: Float, threshold: Float) {
     if (progress < 0.15f) return
 
     val (text, color) = when {
-        horizontal && x < 0 -> stringResource(R.string.action_delete) to UssrColors.Ember
-        horizontal -> stringResource(R.string.action_keep) to UssrColors.Bone
-        y < 0 -> stringResource(R.string.action_favorite) to UssrColors.Gold
-        else -> stringResource(R.string.action_skip) to UssrColors.Dust
+        horizontal && x < 0 -> stringResource(R.string.stamp_delete) to UssrColors.Ember
+        horizontal -> stringResource(R.string.stamp_keep) to UssrColors.Bone
+        y < 0 -> stringResource(R.string.stamp_favorite) to UssrColors.Gold
+        else -> stringResource(R.string.stamp_skip) to UssrColors.Dust
     }
     PixelSurface(
         modifier = Modifier.alpha(progress.coerceIn(0f, 1f)),
@@ -321,7 +397,7 @@ private fun SwipeStamp(x: Float, y: Float, threshold: Float) {
         fillWidth = false,
     ) {
         Text(
-            text = text.uppercase(),
+            text = text,
             style = MaterialTheme.typography.headlineMedium,
             color = color,
         )
@@ -329,46 +405,29 @@ private fun SwipeStamp(x: Float, y: Float, threshold: Float) {
 }
 
 /**
- * The combo counter, and the brake.
+ * The brake.
  *
- * The combo deliberately counts decisions, not speed, and the one thing that resets it is
- * going too fast — so the streak rewards sorting a lot while making haste the only way to
- * lose it. Reclaimed megabytes survive a broken combo, because the work was still done.
+ * There used to be a combo counter here. It is gone from the screen on purpose — a number
+ * that goes up is an invitation to make it go up faster, which is the exact failure this
+ * layer exists to prevent. The streak still runs underneath and still decides when these
+ * warnings fire; the user just never sees a score to chase.
  */
 @Composable
 private fun PacingBanner(state: TriageUiState) {
-    val pacing = state.pacing
-    val tooFast = pacing.events.filterIsInstance<PacingEvent.TooFast>().firstOrNull()
-    val streak = pacing.events.filterIsInstance<PacingEvent.DeleteStreak>().firstOrNull()
-    val milestone = pacing.events.filterIsInstance<PacingEvent.ComboMilestone>().firstOrNull()
+    val events = state.pacing.events
+    val tooFast = events.filterIsInstance<PacingEvent.TooFast>().firstOrNull()
+    val streak = events.filterIsInstance<PacingEvent.DeleteStreak>().firstOrNull()
+    val steady = events.filterIsInstance<PacingEvent.ComboMilestone>().firstOrNull()
 
     Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "x${pacing.combo}",
-                style = ComboTextStyle.copy(
-                    color = if (pacing.combo == 0) UssrColors.Dust else UssrColors.Gold,
-                ),
-            )
-            Text(
-                text = stringResource(R.string.combo_best, pacing.longestCombo),
-                style = MaterialTheme.typography.labelSmall,
-                color = UssrColors.Dust,
-            )
-        }
-
         AnimatedVisibility(visible = tooFast != null) {
-            WarningLine(stringResource(R.string.pacing_too_fast, tooFast?.comboLost ?: 0), UssrColors.Ember)
+            WarningLine(stringResource(R.string.pacing_too_fast), UssrColors.Ember)
         }
         AnimatedVisibility(visible = streak != null) {
             WarningLine(stringResource(R.string.pacing_delete_streak, streak?.streak ?: 0), UssrColors.Gold)
         }
-        AnimatedVisibility(visible = milestone != null && tooFast == null) {
-            WarningLine(stringResource(R.string.pacing_combo, milestone?.combo ?: 0), UssrColors.Bone)
+        AnimatedVisibility(visible = steady != null && tooFast == null) {
+            WarningLine(stringResource(R.string.pacing_steady), UssrColors.Dust)
         }
     }
 }
@@ -379,12 +438,12 @@ private fun WarningLine(text: String, color: Color) {
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = color,
-        modifier = Modifier.padding(top = 4.dp),
+        modifier = Modifier.padding(vertical = 4.dp),
     )
 }
 
 /**
- * The blocking half of the pacing layer: every fiftieth card in normal mode, every twelfth
+ * The blocking half of the pacing layer: every fiftieth file in normal mode, every twelfth
  * in hardcore, and at the end of a long session, the deck stops until the user says go on.
  */
 @Composable
@@ -447,9 +506,7 @@ private fun DeckFinished(state: TriageUiState, onReview: () -> Unit, onBack: () 
                     style = MaterialTheme.typography.titleLarge,
                     color = UssrColors.Bone,
                 )
-                Spacer(Modifier.height(8.dp))
-                Text("x${state.pacing.longestCombo}", style = ComboTextStyle)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     stringResource(
                         R.string.deck_done_body,

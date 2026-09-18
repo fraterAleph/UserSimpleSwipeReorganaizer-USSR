@@ -11,15 +11,19 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,22 +44,28 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.ussr.core.scoring.Category
 import app.ussr.data.DecisionEntity
-import app.ussr.trash.TrashRequest
+import app.ussr.trash.MediaRequests
 import app.ussr.ui.TriageViewModel
 import app.ussr.ui.screens.DeckPickerScreen
 import app.ussr.ui.screens.ReviewScreen
 import app.ussr.ui.screens.SwipeScreen
+import app.ussr.ui.theme.PixelButton
 import app.ussr.ui.theme.UssrTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Draw behind the status and navigation bars, then inset the content back out of
+        // them below. Without this the header sits under the clock, which it did.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             UssrTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    UssrApp()
+                    Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
+                        UssrApp()
+                    }
                 }
             }
         }
@@ -89,7 +99,11 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
     var granted by remember { mutableStateOf(context.hasMediaAccess()) }
     var screen by remember { mutableStateOf(Screen.Picker) }
     var pending by remember { mutableStateOf(emptyList<DecisionEntity>()) }
-    var trashing by remember { mutableStateOf(emptyList<Long>()) }
+
+    // Confirming runs up to two system sheets back to back — favourites, then the trash —
+    // because each is a separate write to media the app only has read permission for.
+    var favouritesInFlight by remember { mutableStateOf(emptyList<Long>()) }
+    var trashInFlight by remember { mutableStateOf(emptyList<Long>()) }
 
     val permissions = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -101,10 +115,26 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
         // Anything but a confirmation leaves the decisions pending, so a cancelled sheet
         // costs the user nothing and the list is still there next time.
         if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onTrashConfirmed(trashing)
+            viewModel.onTrashConfirmed(trashInFlight)
             screen = Screen.Picker
         }
-        trashing = emptyList()
+        trashInFlight = emptyList()
+    }
+
+    val favoriteSheet = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.onFavoritesConfirmed(favouritesInFlight)
+        }
+        favouritesInFlight = emptyList()
+        // Whether or not the favourites went through, the deletions still need their turn.
+        val ids = trashInFlight
+        if (ids.isNotEmpty()) {
+            MediaRequests.trash(context.contentResolver, ids)?.let {
+                trashSheet.launch(IntentSenderRequest.Builder(it).build())
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -125,16 +155,29 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
         }
     }
 
-    fun confirmTrash() {
+    fun confirm() {
         scope.launch {
-            val ids = viewModel.pendingDeletionIds()
-            if (ids.isEmpty()) return@launch
+            val favourites = viewModel.pendingFavoriteIds()
             // One chunk per sheet: some OEM implementations refuse a single request carrying
             // thousands of uris, and a shorter list is easier to read besides.
-            val chunk = TrashRequest.chunks(ids).first()
-            val sender = TrashRequest.create(context.contentResolver, chunk) ?: return@launch
-            trashing = chunk
-            trashSheet.launch(IntentSenderRequest.Builder(sender).build())
+            val toTrash = MediaRequests.chunks(viewModel.pendingDeletionIds()).firstOrNull().orEmpty()
+            trashInFlight = toTrash
+
+            if (favourites.isNotEmpty()) {
+                val chunk = MediaRequests.chunks(favourites).first()
+                favouritesInFlight = chunk
+                MediaRequests.favorite(context.contentResolver, chunk)?.let {
+                    favoriteSheet.launch(IntentSenderRequest.Builder(it).build())
+                    return@launch
+                }
+                favouritesInFlight = emptyList()
+            }
+
+            if (toTrash.isNotEmpty()) {
+                MediaRequests.trash(context.contentResolver, toTrash)?.let {
+                    trashSheet.launch(IntentSenderRequest.Builder(it).build())
+                }
+            }
         }
     }
 
@@ -161,6 +204,7 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
             onUndo = viewModel::undo,
             onAcknowledge = viewModel::acknowledgePacing,
             onBatch = viewModel::acceptBatch,
+            onReturnAnimationDone = viewModel::clearReturnAnimation,
             onReview = {
                 viewModel.acknowledgePacing()
                 openReview()
@@ -173,8 +217,9 @@ private fun UssrApp(viewModel: TriageViewModel = viewModel()) {
 
         Screen.Review -> ReviewScreen(
             pending = pending,
+            pendingFavorites = state.pendingFavorites,
             contentUri = ::uriFor,
-            onConfirm = ::confirmTrash,
+            onConfirm = ::confirm,
             onBack = { screen = Screen.Picker },
         )
     }
@@ -191,6 +236,6 @@ private fun PermissionWall(onGrant: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.permission_body), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onGrant) { Text(stringResource(R.string.permission_grant)) }
+        PixelButton(stringResource(R.string.permission_grant), onGrant)
     }
 }

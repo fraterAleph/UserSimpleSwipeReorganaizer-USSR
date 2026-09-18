@@ -29,6 +29,8 @@ data class TriageUiState(
     val loading: Boolean = true,
     val mode: TriageMode = TriageMode.Normal,
     val progress: SweepProgress = SweepProgress(0, 0),
+    /** Everything MediaStore reported, used for the header line on the picker. */
+    val libraryCount: Int = 0,
     val decks: List<Deck> = emptyList(),
     val activeCategory: Category? = null,
     val cards: List<Card> = emptyList(),
@@ -36,7 +38,13 @@ data class TriageUiState(
     val pacing: PacingState = PacingState(),
     val pendingDeletions: Int = 0,
     val pendingBytes: Long = 0,
+    val pendingFavorites: Int = 0,
     val lastDecision: LastDecision? = null,
+    /**
+     * Set when a card has just been pulled back by an undo, so the deck can fly it in from
+     * the side it left rather than having it blink into place.
+     */
+    val returningFrom: SwipeDirection? = null,
 ) {
     val current: Card? get() = cards.getOrNull(cursor)
     val next: Card? get() = cards.getOrNull(cursor + 1)
@@ -68,7 +76,11 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
                 _state.value = _state.value.copy(progress = SweepProgress(done, total))
             }
             val decks = repository.decks(library, _state.value.mode)
-            _state.value = _state.value.copy(loading = false, decks = decks)
+            _state.value = _state.value.copy(
+                loading = false,
+                decks = decks,
+                libraryCount = library.size,
+            )
             refreshPending()
             ContentAnalysisWorker.enqueue(getApplication<Application>())
         }
@@ -128,6 +140,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             cursor = _state.value.cursor + 1,
             pacing = pacing,
             lastDecision = LastDecision(card.item, direction),
+            returningFrom = null,
         )
         viewModelScope.launch {
             repository.record(card.item, kind)
@@ -143,6 +156,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
             cursor = (_state.value.cursor - 1).coerceAtLeast(0),
             pacing = pacing,
             lastDecision = null,
+            returningFrom = last.direction,
         )
         viewModelScope.launch {
             repository.undo(last.item)
@@ -171,7 +185,24 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** The deck has finished playing the return animation; stop replaying it on recomposition. */
+    fun clearReturnAnimation() {
+        if (_state.value.returningFrom != null) {
+            _state.value = _state.value.copy(returningFrom = null)
+        }
+    }
+
     suspend fun pendingDeletionIds(): List<Long> = repository.pendingDeletionsNow().map { it.mediaId }
+
+    suspend fun pendingFavoriteIds(): List<Long> = repository.pendingFavoritesNow().map { it.mediaId }
+
+    /** Called once the system favourite sheet came back with a yes. */
+    fun onFavoritesConfirmed(ids: List<Long>) {
+        viewModelScope.launch {
+            repository.markCommitted(ids)
+            refreshPending()
+        }
+    }
 
     /** Called once the system trash sheet came back with a yes. */
     fun onTrashConfirmed(ids: List<Long>) {
@@ -193,6 +224,7 @@ class TriageViewModel(application: Application) : AndroidViewModel(application) 
         _state.value = _state.value.copy(
             pendingDeletions = pending.size,
             pendingBytes = pending.sumOf { it.sizeBytes },
+            pendingFavorites = repository.pendingFavoritesNow().size,
         )
     }
 }

@@ -103,6 +103,11 @@ honour it.
   edited after import, favourited, or old and never touched.
 - **MediaStore gives no album membership** to a third-party app, so that protection leans on
   the favourite flag and the edit timestamp.
+- **A swipe up sets the system favourite flag** (`MediaStore.createFavoriteRequest`), so the
+  stock gallery and most OEM galleries show the item among their own favourites. Apps that
+  keep a private favourites list instead — Google Photos among them — may not reflect it. If
+  that turns out to matter, the fallback is a gallery view inside the app, which this avoids
+  building for now.
 - **Face detection is not wired up yet.** The scorer already treats faces as a reason to keep
   and the field is plumbed through; the ML Kit face model is simply not a dependency yet, so
   the count is always zero today.

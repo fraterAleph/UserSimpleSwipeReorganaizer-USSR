@@ -1,8 +1,10 @@
 package app.ussr.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -30,17 +33,25 @@ import app.ussr.ui.theme.UssrColors
 import coil.compose.AsyncImage
 
 /**
- * The last look before anything moves. Everything swiped left is laid out as a grid with
- * the total it frees; confirming hands the whole list to the system trash sheet, where
- * Android holds it for 30 days.
+ * The last look before anything moves: the write-off sheet. Everything swiped left is laid
+ * out with the total it frees, and confirming hands the list to the system, which keeps it
+ * in the trash for 30 days.
+ *
+ * Favourites ride along here too. Marking someone else's media is a write, so it needs the
+ * same confirmation a deletion does, and collecting them is better than interrupting every
+ * swipe up with a system dialog.
  */
 @Composable
 fun ReviewScreen(
     pending: List<DecisionEntity>,
+    pendingFavorites: Int,
     contentUri: (Long) -> Any,
     onConfirm: () -> Unit,
     onBack: () -> Unit,
 ) {
+    // Without this the system back button closes the app instead of returning to the deck.
+    BackHandler(onBack = onBack)
+
     Column(
         Modifier
             .fillMaxSize()
@@ -54,11 +65,11 @@ fun ReviewScreen(
         ) {
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    text = stringResource(R.string.review_title).uppercase(),
+                    text = stringResource(R.string.review_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = UssrColors.Bone,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(
                         R.string.review_summary,
@@ -68,7 +79,14 @@ fun ReviewScreen(
                     style = MaterialTheme.typography.titleSmall,
                     color = UssrColors.Ember,
                 )
-                Spacer(Modifier.height(6.dp))
+                if (pendingFavorites > 0) {
+                    Text(
+                        text = stringResource(R.string.review_favorites, pendingFavorites),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = UssrColors.Gold,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.review_trash_note),
                     style = MaterialTheme.typography.bodySmall,
@@ -79,23 +97,33 @@ fun ReviewScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(90.dp),
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(bottom = 8.dp),
-        ) {
-            items(pending, key = { it.mediaId }) { row ->
-                AsyncImage(
-                    model = contentUri(row.mediaId),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .background(UssrColors.Char)
-                        .border(2.dp, UssrColors.Edge),
+        if (pending.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.review_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = UssrColors.Dust,
                 )
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(90.dp),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(bottom = 8.dp),
+            ) {
+                items(pending, key = { it.mediaId }) { row ->
+                    AsyncImage(
+                        model = contentUri(row.mediaId),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .background(UssrColors.Char)
+                            .border(2.dp, UssrColors.Edge),
+                    )
+                }
             }
         }
 
@@ -103,7 +131,7 @@ fun ReviewScreen(
         PixelButton(
             text = stringResource(R.string.review_confirm, pending.size),
             onClick = onConfirm,
-            enabled = pending.isNotEmpty(),
+            enabled = pending.isNotEmpty() || pendingFavorites > 0,
             fill = UssrColors.Blood,
         )
         Spacer(Modifier.height(8.dp))

@@ -168,6 +168,14 @@ class TriageRepository(
     suspend fun pendingDeletionsNow(): List<DecisionEntity> =
         database.decisionDao().pendingDeletionsNow()
 
+    /**
+     * Swipes up that have not reached MediaStore yet. A favourite is a write to someone
+     * else's media, so it needs the user's confirmation just as a deletion does, and the
+     * app collects them rather than interrupting every swipe with a system sheet.
+     */
+    suspend fun pendingFavoritesNow(): List<DecisionEntity> =
+        database.decisionDao().pendingFavoritesNow()
+
     /** Duplicates and bursts both produce groups; an item can only belong to one. */
     private fun buildGroupIndex(
         items: List<MediaItem>,

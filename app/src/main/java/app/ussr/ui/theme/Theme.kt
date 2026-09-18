@@ -7,10 +7,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -37,7 +35,7 @@ object UssrColors {
     val Bone = Color(0xFFF2E4D4)
     val Dust = Color(0xFF9A7F86)
 
-    /** Reserved for the combo counter and nothing else, so it always means the same thing. */
+    /** Reserved for "keep this" — favourites, and the reasons that argue for keeping. */
     val Gold = Color(0xFFF2B705)
 
     val Edge = Color(0xFF7A1028)
@@ -97,16 +95,6 @@ private val PixelShapes = Shapes(
     medium = RoundedCornerShape(3.dp),
     large = RoundedCornerShape(4.dp),
     extraLarge = RoundedCornerShape(4.dp),
-)
-
-/** The counter style: big, gold, centred, used for the combo and nothing else. */
-val ComboTextStyle = TextStyle(
-    fontFamily = FontFamily.Monospace,
-    fontWeight = FontWeight.Black,
-    fontSize = 34.sp,
-    letterSpacing = 3.sp,
-    color = UssrColors.Gold,
-    textAlign = TextAlign.Center,
 )
 
 @Composable

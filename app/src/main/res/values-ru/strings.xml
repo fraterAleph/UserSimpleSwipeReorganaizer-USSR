@@ -15,22 +15,20 @@
     <string name="permission_body">Фото и видео читаются только на этом устройстве. Ничего не отправляется наружу и ничего не удаляется без вашего подтверждения.</string>
     <string name="permission_grant">Разрешить</string>
 
-    <string name="scan_title">Просматриваем галерею</string>
+    <string name="scan_title">Опись материалов</string>
     <string name="scan_progress">%1$d из %2$d</string>
 
-    <string name="picker_pending">%1$d ждёт удаления · %2$s</string>
+    <string name="picker_pending">к списанию: %1$d · %2$s</string>
     <string name="picker_swipe_everything">Свайпать всё подряд</string>
     <string name="picker_review">Посмотреть очередь</string>
 
-    <string name="deck_summary">%1$s · уверенность %2$d%%</string>
+    <string name="deck_summary">освободит %1$s · достоверность %2$d%%</string>
     <string name="deck_batchable">%1$d можно снести одним нажатием</string>
-    <string name="deck_done_title">Пачка закончилась</string>
-    <string name="deck_done_body">%1$d решений за сессию. В очереди на удаление %2$d, это %3$s.</string>
+    <string name="deck_done_title">ПАПКА ЗАКРЫТА</string>
+    <string name="deck_done_body">Рассмотрено дел: %1$d. К списанию — %2$d, это %3$s.</string>
 
-    <string name="combo_best">рекорд %1$d</string>
-    <string name="pacing_too_fast">Не превышайте скорость — так удалится что-то нужное. Комбо %1$d сгорело.</string>
+    <string name="pacing_too_fast">Не превышайте скорость — так удалится что-то нужное.</string>
     <string name="pacing_delete_streak">%1$d удалений подряд. Вы всё ещё смотрите на них?</string>
-    <string name="pacing_combo">%1$d подряд, без спешки. Красиво.</string>
 
     <string name="checkpoint_title">Уже %1$d карточек</string>
     <string name="checkpoint_rest_title">Сессия затянулась</string>
@@ -38,7 +36,7 @@
     <string name="checkpoint_review">Посмотреть очередь</string>
     <string name="checkpoint_continue">Свайпать дальше</string>
 
-    <string name="review_title">Пока ничего не удалено</string>
+    <string name="review_title">АКТ НА СПИСАНИЕ</string>
     <string name="review_summary">%1$d штук · %2$s</string>
     <string name="review_trash_note">После подтверждения всё уйдёт в системную корзину. Android держит её 30 дней — до этого любой файл можно вернуть из галереи.</string>
     <string name="review_confirm">Отправить %1$d в корзину</string>
@@ -50,14 +48,14 @@
     <string name="picker_empty">Свайпать нечего. Галерея уже чистая.</string>
     <string name="picker_empty_hardcore">Пусто. Избранного, альбомных и отредактированных фото для разбора не осталось.</string>
 
-    <string name="category_duplicates">Дубликаты</string>
-    <string name="category_bursts">Серии кадров</string>
-    <string name="category_blurry">Пустые и смазанные</string>
-    <string name="category_screenshots">Скриншоты</string>
-    <string name="category_messengers">Мессенджеры и соцсети</string>
-    <string name="category_heavy">Тяжёлые видео</string>
-    <string name="category_downloads">Загрузки</string>
-    <string name="category_everything">Всё остальное</string>
+    <string name="category_duplicates">Повторы</string>
+    <string name="category_bursts">Серии</string>
+    <string name="category_blurry">Брак съёмки</string>
+    <string name="category_screenshots">Снимки экрана</string>
+    <string name="category_messengers">Переписка и соцсети</string>
+    <string name="category_heavy">Крупные объёмы</string>
+    <string name="category_downloads">Загруженное</string>
+    <string name="category_everything">Прочие материалы</string>
 
     <string name="reason_exact_duplicate">Точная копия той, что остаётся</string>
     <string name="reason_near_duplicate">Почти та же картинка, что и другая</string>
@@ -78,4 +76,23 @@
     <string name="reason_favorite">Отмечено избранным</string>
     <string name="reason_album">Лежит в альбоме</string>
     <string name="reason_edited">Вы редактировали это после импорта</string>
+
+    <string name="picker_title">КАРТОТЕКА</string>
+    <string name="picker_subject">Объект наблюдения · материалов в деле: %1$d</string>
+    <string name="deck_case_no">ДЕЛО № %1$02d</string>
+    <string name="deck_count">%1$d шт.</string>
+
+    <string name="field_subject">ОБЪЕКТ</string>
+    <string name="field_measurements">ПАРАМЕТРЫ</string>
+    <string name="field_grounds">ОСНОВАНИЯ</string>
+    <string name="badge_video">ВИДЕО %1$s</string>
+
+    <string name="stamp_delete">СПИСАТЬ</string>
+    <string name="stamp_keep">В ДЕЛО</string>
+    <string name="stamp_favorite">ОСОБО ВАЖНО</string>
+    <string name="stamp_skip">ОТЛОЖИТЬ</string>
+
+    <string name="pacing_steady">Ровный темп. Так и держите.</string>
+    <string name="review_favorites">и %1$d — в избранное</string>
+    <string name="review_empty">К списанию пока ничего не отобрано.</string>
 </resources>

@@ -91,6 +91,9 @@ interface DecisionDao {
     @Query("SELECT * FROM decisions WHERE committedAtMs IS NULL AND kind = 'Delete'")
     suspend fun pendingDeletionsNow(): List<DecisionEntity>
 
+    @Query("SELECT * FROM decisions WHERE committedAtMs IS NULL AND kind = 'Favorite'")
+    suspend fun pendingFavoritesNow(): List<DecisionEntity>
+
     @Query("SELECT mediaId FROM decisions")
     suspend fun decidedIds(): List<Long>
 
