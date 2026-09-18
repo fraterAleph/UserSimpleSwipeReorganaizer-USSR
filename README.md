@@ -35,10 +35,11 @@ reach it. Hardcore is deliberately slower: no one-tap batch grid, a brake that t
 the speed, and a checkpoint every twelve cards instead of every fifty.
 
 **Pushes back when the hand outruns the eye.** Triage always fails the same way: the first
-fifty cards really are junk, the gesture becomes a reflex, and card fifty-one goes unseen.
-So the combo counter rewards *how much* you sorted, and the single thing that breaks it is
-swiping faster than you can look. Every fiftieth card stops the deck to show you the queue.
-Reclaimed megabytes survive a broken combo — the work was still done.
+fifty files really are junk, the gesture becomes a reflex, and file fifty-one goes unseen.
+So the app watches the pace and says so when the swiping outruns the looking, and every
+fiftieth card it stops the deck to show what is queued. There is no score on screen: a
+number that goes up is an invitation to make it go up faster, which is the failure this
+layer exists to prevent.
 
 **Never deletes.** Swiping left only queues. The review screen shows the whole queue with
 the total it frees, and confirming hands it to `MediaStore.createTrashRequest` — the system
@@ -114,9 +115,9 @@ honour it.
 - **The first content pass is slow** on a large library — thousands of images through OCR is
   minutes of work. That is why it waits for a charger and why the heuristics alone are enough
   to start.
-- **The Android module has never been run on a device.** It compiles clean now — debug and
-  release, R8 and resource shrinking included — and `core`'s analysis is unit-tested, but
-  nothing here has met a real photo library. Treat the first run as a first run.
+- **It is early.** The app builds clean and has been run once against a real library, which
+  immediately turned up three defects (black video cards, a header under the status bar, back
+  closing the app). All three are fixed; expect more of that kind.
 
 ## Licence
 
